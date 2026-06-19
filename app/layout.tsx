@@ -32,7 +32,6 @@ export const metadata: Metadata = {
   title: "NULLBOSS — The Fund That Has No Boss",
   description:
     "An autonomous AI hedge fund on Avalanche C-Chain. No managers. No emotions. No sleep.",
-  themeColor: "#0A0B0D",
   manifest: "/manifest.json",
   icons: {
     apple: "/favicon.ico",
@@ -43,6 +42,9 @@ export const metadata: Metadata = {
       "An autonomous AI hedge fund on Avalanche C-Chain. No managers. No emotions. No sleep.",
     type: "website",
     siteName: "NULLBOSS",
+  },
+  other: {
+    "theme-color": "#0A0B0D",
   },
   twitter: {
     card: "summary_large_image",

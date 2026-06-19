@@ -125,8 +125,8 @@ export default function TransparencyPage() {
                     fontSize: '12px',
                     fontFamily: 'JetBrains Mono',
                   }}
-                  labelFormatter={formatDate}
-                  formatter={(value: number) => [formatUsd(value), 'NAV']}
+                  labelFormatter={(label: unknown) => formatDate(Number(label))}
+                  formatter={(value) => [formatUsd(Number(value)), 'NAV']}
                 />
                 <Area
                   type="monotone"

@@ -48,7 +48,7 @@ export default function DashboardPage() {
         <HeartbeatIndicator />
       </div>
 
-      {!isConnected ? (
+      {isConnected && (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Position Summary */}
           <div className="rounded-lg border border-border bg-surface p-6 lg:col-span-2">
@@ -167,11 +167,23 @@ export default function DashboardPage() {
               />
               <DataRow
                 label="AVAX Balance"
-                value={balance ? `${parseFloat(balance.formatted).toFixed(4)} AVAX` : '—'}
+                value={balance ? `${(Number(balance.value) / 10 ** balance.decimals).toFixed(4)} AVAX` : '—'}
               />
               <DataRow label="Network" value="Avalanche C-Chain" valueColor="text-accent-cyan" />
             </div>
           </div>
+        </div>
+      )}
+
+      {!isConnected && (
+        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-border p-16 text-center">
+          <div className="mb-4 font-mono text-4xl text-foreground-muted">[ ]</div>
+          <p className="font-mono text-sm text-foreground-muted">
+            Connect your wallet to view your position.
+          </p>
+          <p className="mt-1 font-mono text-xs text-foreground-muted">
+            Avalanche C-Chain · chainId 43114
+          </p>
         </div>
       )}
     </main>
