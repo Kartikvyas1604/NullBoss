@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Fraunces, Unbounded } from "next/font/google";
 import { Providers } from "./providers";
 import { Header } from "./components/Header";
-import { MobileNav } from "./components/MobileNav";
 import { Footer } from "./components/Footer";
 import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
@@ -51,7 +50,6 @@ export default function RootLayout({
         <Providers>
           <div className="relative flex flex-1 flex-col">
             <Header />
-            <MobileNav />
             <div className="flex-1 reveal">{children}</div>
             <Footer />
           </div>
