@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { useAgentStatus } from '@/app/hooks/useAgentStatus'
 import { HeartbeatIndicator } from '@/app/components/HeartbeatIndicator'
 import { formatCompactUsd } from '@/app/lib/formatters'
@@ -11,7 +12,7 @@ const AGENT_COLORS = {
   red: { border: 'border-accent-red', glow: 'glow-red', bg: 'bg-accent-red-dim' },
 } as const
 
-const AGENT_STROKES = {
+const AGENT_STROKES: Record<string, string> = {
   cyan: '#4DD8E8',
   green: '#39FF88',
   amber: '#FFB84D',
@@ -22,17 +23,13 @@ function AgentNode({
   agent,
   isParent = false,
 }: {
-  agent: { id: string; name: string; role: string; status: string; feesGenerated: number; tradesExecuted: number; color: keyof typeof AGENT_COLORS }
+  agent: { id: string; name: string; role: string; status: string; feesGenerated: number; tradesExecuted: number; color: string }
   isParent?: boolean
 }) {
-  const colors = AGENT_COLORS[agent.color]
+  const colors = AGENT_COLORS[agent.color as keyof typeof AGENT_COLORS]
 
   return (
-    <div
-      className={`relative flex flex-col items-center ${
-        isParent ? '' : 'cursor-pointer'
-      }`}
-    >
+    <div className="relative flex flex-col items-center">
       <div
         className={`relative flex items-center justify-center rounded-full border-2 ${colors.border} ${colors.glow} ${
           isParent ? 'h-28 w-28 md:h-36 md:w-36' : 'h-24 w-24 md:h-28 md:w-28'
@@ -59,9 +56,7 @@ function AgentNode({
       <div className="mt-2 text-center">
         <div
           className={`font-mono text-[10px] uppercase tracking-wider ${
-            agent.status === 'active'
-              ? 'text-accent-green'
-              : 'text-foreground-muted'
+            agent.status === 'active' ? 'text-accent-green' : 'text-foreground-muted'
           }`}
         >
           {agent.status === 'active' ? '● ACTIVE' : '○ IDLE'}
@@ -73,6 +68,78 @@ function AgentNode({
         )}
       </div>
     </div>
+  )
+}
+
+function ConnectingLines({ agents }: { agents: { id: string; color: string; status: string }[] }) {
+  const svgRef = useRef<SVGSVGElement>(null)
+
+  useEffect(() => {
+    function redraw() {
+      if (!svgRef.current) return
+      const svg = svgRef.current
+      const rect = svg.getBoundingClientRect()
+      svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
+    }
+    redraw()
+    window.addEventListener('resize', redraw)
+    return () => window.removeEventListener('resize', redraw)
+  }, [])
+
+  return (
+    <svg
+      ref={svgRef}
+      className="absolute inset-0 h-full w-full"
+      style={{ pointerEvents: 'none' }}
+      preserveAspectRatio="none"
+    >
+      <defs>
+        {Object.entries(AGENT_STROKES).map(([key, color]) => (
+          <linearGradient key={key} id={`org-line-${key}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.5} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.1} />
+          </linearGradient>
+        ))}
+      </defs>
+
+      {/* We use viewBox-based percentage coordinates calculated on mount */}
+      {agents.map((agent, i) => {
+        const colors = AGENT_COLORS[agent.color as keyof typeof AGENT_COLORS]
+        return (
+          <g key={agent.id}>
+            <line
+              x1="50%"
+              y1="22%"
+              x2={`${20 + i * 30}%`}
+              y2="62%"
+              stroke={`url(#org-line-${agent.color})`}
+              strokeWidth={1.5}
+              opacity={0.35}
+            />
+            <line
+              x1="50%"
+              y1="22%"
+              x2={`${20 + i * 30}%`}
+              y2="62%"
+              stroke={AGENT_STROKES[agent.color]}
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              className="signal-line"
+              opacity={agent.status === 'active' ? 0.7 : 0.2}
+            />
+            <circle
+              cx={`${20 + i * 30}%`}
+              cy="62%"
+              r="42"
+              fill="none"
+              stroke={AGENT_STROKES[agent.color]}
+              strokeWidth={0.5}
+              opacity={0.15}
+            />
+          </g>
+        )
+      })}
+    </svg>
   )
 }
 
@@ -103,66 +170,33 @@ export default function AgentsPage() {
         <HeartbeatIndicator />
       </div>
 
-      <div className="relative flex flex-1 flex-col items-center justify-center py-8">
-        {/* SVG connecting lines */}
-        <svg
-          className="absolute inset-0 h-full w-full"
-          style={{ pointerEvents: 'none' }}
-        >
-          <defs>
-            {Object.entries(AGENT_STROKES).map(([key, color]) => (
-              <linearGradient key={key} id={`line-${key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={0.6} />
-                <stop offset="100%" stopColor={color} stopOpacity={0.15} />
-              </linearGradient>
-            ))}
-          </defs>
-
-          {/* Lines from parent to each sub-agent */}
-          {subAgents.map((agent, i) => {
-            const cx = 50
-            const parentY = 12
-            const childX = 8 + i * 28
-            const childY = 52
-            return (
-              <g key={agent.id}>
-                <line
-                  x1={`${cx}%`}
-                  y1={`${parentY}%`}
-                  x2={`${childX + 12}%`}
-                  y2={`${childY - 4}%`}
-                  stroke={`url(#line-${agent.color})`}
-                  strokeWidth={1.5}
-                  opacity={0.4}
-                />
-                <line
-                  x1={`${cx}%`}
-                  y1={`${parentY}%`}
-                  x2={`${childX + 12}%`}
-                  y2={`${childY - 4}%`}
-                  stroke={AGENT_STROKES[agent.color]}
-                  strokeWidth={1}
-                  strokeDasharray="4 4"
-                  className="signal-line"
-                  opacity={agent.status === 'active' ? 0.8 : 0.3}
-                />
-              </g>
-            )
-          })}
-        </svg>
+      <div className="relative flex min-h-[500px] flex-1 flex-col items-center justify-center rounded-lg border border-border bg-surface/30 py-12">
+        <ConnectingLines agents={subAgents} />
 
         {/* Parent Agent */}
-        <div className="relative z-10 mb-12">
-          {parent && <AgentNode agent={parent} isParent />}
+        <div className="relative z-10 mb-16">
+          {parent && (
+            <div className="flex flex-col items-center">
+              <AgentNode agent={parent} isParent />
+              <div className="mt-3 text-center">
+                <div className="font-mono text-xs leading-tight text-accent-cyan">
+                  {parent?.role}
+                </div>
+                <div className="mt-1 font-mono text-[10px] text-foreground-muted">
+                  {formatCompactUsd(parent.feesGenerated)} fees generated
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sub-agents row */}
-        <div className="relative z-10 grid w-full max-w-2xl grid-cols-3 gap-4 md:gap-8">
+        <div className="relative z-10 grid w-full max-w-3xl grid-cols-3 gap-4 md:gap-8">
           {subAgents.map((agent) => (
             <div key={agent.id} className="flex justify-center">
               <div className="flex flex-col items-center">
                 <AgentNode agent={agent} />
-                <div className="mt-3 text-center">
+                <div className="mt-3 max-w-[140px] text-center">
                   <div className="font-mono text-[10px] leading-tight text-foreground-muted">
                     {agent.role}
                   </div>
@@ -172,31 +206,67 @@ export default function AgentsPage() {
           ))}
         </div>
 
-        {/* Summary stats */}
-        <div className="relative z-10 mt-16 grid w-full max-w-lg grid-cols-3 gap-4 rounded-lg border border-border bg-surface p-4">
-          <div className="text-center">
+        {/* Network stats */}
+        <div className="relative z-10 mt-16 grid w-full max-w-lg grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border">
+          <div className="bg-surface p-4 text-center">
             <div className="font-mono text-lg text-accent-cyan">4</div>
-            <div className="font-mono text-[10px] uppercase text-foreground-muted">
-              Agents
-            </div>
+            <div className="font-mono text-[10px] uppercase text-foreground-muted">Agents</div>
           </div>
-          <div className="text-center">
+          <div className="bg-surface p-4 text-center">
             <div className="font-mono text-lg text-accent-green">
               {agents.filter((a) => a.status === 'active').length}
             </div>
-            <div className="font-mono text-[10px] uppercase text-foreground-muted">
-              Active
-            </div>
+            <div className="font-mono text-[10px] uppercase text-foreground-muted">Active</div>
           </div>
-          <div className="text-center">
+          <div className="bg-surface p-4 text-center">
             <div className="font-mono text-lg text-foreground">
               {agents.reduce((s, a) => s + a.tradesExecuted, 0)}
             </div>
-            <div className="font-mono text-[10px] uppercase text-foreground-muted">
-              Total Trades
-            </div>
+            <div className="font-mono text-[10px] uppercase text-foreground-muted">Trades</div>
           </div>
         </div>
+      </div>
+
+      {/* Sub-agent detail cards */}
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
+        {subAgents.map((agent) => {
+          const colors = AGENT_COLORS[agent.color as keyof typeof AGENT_COLORS]
+          return (
+            <div
+              key={agent.id}
+              className={`rounded-lg border ${colors.border} ${colors.bg} p-4`}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <span
+                  className="font-mono text-sm font-bold tracking-wider"
+                  style={{ color: AGENT_STROKES[agent.color] }}
+                >
+                  {agent.name}
+                </span>
+                <span
+                  className={`font-mono text-[10px] ${
+                    agent.status === 'active' ? 'text-accent-green' : 'text-foreground-muted'
+                  }`}
+                >
+                  {agent.status === 'active' ? '● LIVE' : '○ STANDBY'}
+                </span>
+              </div>
+              <div className="mb-3 font-mono text-[10px] text-foreground-muted">
+                {agent.role}
+              </div>
+              <div className="space-y-1 border-t border-border pt-3">
+                <div className="flex justify-between font-mono text-[10px]">
+                  <span className="text-foreground-muted">Fees Generated</span>
+                  <span className="text-foreground">{formatCompactUsd(agent.feesGenerated)}</span>
+                </div>
+                <div className="flex justify-between font-mono text-[10px]">
+                  <span className="text-foreground-muted">Trades</span>
+                  <span className="text-foreground">{agent.tradesExecuted}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </div>
     </main>
   )
