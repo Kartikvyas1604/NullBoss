@@ -1,26 +1,149 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0A0B0D;
+  --surface: #121316;
+  --surface-elevated: #1A1B1E;
+  --border: #25262A;
+  --foreground: #D1D2D5;
+  --foreground-muted: #787980;
+  --accent-red: #E84142;
+  --accent-cyan: #4DD8E8;
+  --accent-green: #39FF88;
+  --accent-amber: #FFB84D;
+  --accent-red-dim: rgba(232, 65, 66, 0.15);
+  --accent-cyan-dim: rgba(77, 216, 232, 0.15);
+  --accent-green-dim: rgba(57, 255, 136, 0.1);
+
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-body: "Unbounded", "system-ui", sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-foreground-muted: var(--foreground-muted);
+  --color-accent-red: var(--accent-red);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-green: var(--accent-green);
+  --color-accent-amber: var(--accent-amber);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  font-weight: 300;
 }
+
+/* ── Scanline overlay ── */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+/* ── Grid background ── */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(37, 38, 42, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 38, 42, 0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Heartbeat pulse ── */
+@keyframes heartbeat {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+.heartbeat {
+  animation: heartbeat 2s ease-in-out infinite;
+}
+
+/* ── Signal flow (for org chart lines) ── */
+@keyframes signal-flow {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+.signal-line {
+  stroke-dasharray: 4 4;
+  animation: signal-flow 0.8s linear infinite;
+}
+
+/* ── Odometer roll ── */
+@keyframes tick-up {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+.odometer-digit {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+}
+
+/* ── Staggered reveal ── */
+@keyframes fade-slide-up {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  animation: fade-slide-up 0.6s ease-out both;
+}
+.reveal-delay-1 { animation-delay: 0.1s; }
+.reveal-delay-2 { animation-delay: 0.25s; }
+.reveal-delay-3 { animation-delay: 0.4s; }
+.reveal-delay-4 { animation-delay: 0.55s; }
+.reveal-delay-5 { animation-delay: 0.7s; }
+
+/* ── Glow effects ── */
+.glow-red {
+  box-shadow: 0 0 20px rgba(232, 65, 66, 0.3), 0 0 60px rgba(232, 65, 66, 0.1);
+}
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(77, 216, 232, 0.3), 0 0 60px rgba(77, 216, 232, 0.1);
+}
+.glow-green {
+  box-shadow: 0 0 20px rgba(57, 255, 136, 0.3), 0 0 60px rgba(57, 255, 136, 0.1);
+}
+.glow-text-red {
+  text-shadow: 0 0 10px rgba(232, 65, 66, 0.4);
+}
+.glow-text-cyan {
+  text-shadow: 0 0 10px rgba(77, 216, 232, 0.4);
+}
+.glow-text-green {
+  text-shadow: 0 0 10px rgba(57, 255, 136, 0.4);
+}
+
+/* ── CRT off-white glow ── */
+@keyframes crt-flicker {
+  0% { opacity: 1; }
+  50% { opacity: 0.98; }
+  100% { opacity: 1; }
+}
+.crt {
+  animation: crt-flicker 0.15s infinite;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--foreground-muted); }
