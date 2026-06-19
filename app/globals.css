@@ -142,6 +142,15 @@ body::after {
   animation: crt-flicker 0.15s infinite;
 }
 
+/* ── Slide in (toasts) ── */
+@keyframes slide-in {
+  0% { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--surface); }

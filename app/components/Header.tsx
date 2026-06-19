@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { LiveClock } from './LiveClock'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Terminal' },
@@ -30,6 +31,8 @@ export function Header() {
               NULL<span className="text-accent-red">BOSS</span>
             </span>
           </Link>
+          <span className="hidden h-4 w-px bg-border sm:block" />
+          <LiveClock />
         </div>
 
         <nav className="hidden items-center gap-6 md:flex">
