@@ -5,6 +5,7 @@ import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { SystemStatus } from "./components/SystemStatus";
 import { NewTradeToast } from "./components/NewTradeToast";
+import { PageTitleUpdater } from "./components/PageTitle";
 import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
 
@@ -66,6 +67,7 @@ export default function RootLayout({
           <div className="relative flex flex-1 flex-col">
             <Header />
             <div className="flex-1 reveal">{children}</div>
+            <PageTitleUpdater />
             <NewTradeToast />
             <SystemStatus />
             <Footer />

@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react'
 import { useAgentStatus } from '@/app/hooks/useAgentStatus'
 import { HeartbeatIndicator } from '@/app/components/HeartbeatIndicator'
+import { SectionHeader } from '@/app/components/SectionHeader'
+import { StatusBadge } from '@/app/components/StatusBadge'
 import { formatCompactUsd } from '@/app/lib/formatters'
 
 const AGENT_COLORS = {
@@ -160,13 +162,8 @@ export default function AgentsPage() {
 
   return (
     <main className="mx-auto flex max-w-7xl flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl tracking-tight">Agent Network</h1>
-          <p className="mt-1 font-mono text-xs text-foreground-muted">
-            Hierarchical intelligence — one parent, three specialized sub-agents
-          </p>
-        </div>
+      <div className="mb-8 flex items-start justify-between">
+        <SectionHeader title="Agent Network" subtitle="Hierarchical intelligence — one parent, three specialized sub-agents" accent="cyan" />
         <HeartbeatIndicator />
       </div>
 
@@ -243,13 +240,7 @@ export default function AgentsPage() {
                 >
                   {agent.name}
                 </span>
-                <span
-                  className={`font-mono text-[10px] ${
-                    agent.status === 'active' ? 'text-accent-green' : 'text-foreground-muted'
-                  }`}
-                >
-                  {agent.status === 'active' ? '● LIVE' : '○ STANDBY'}
-                </span>
+                <StatusBadge status={agent.status === 'active' ? 'live' : 'standby'} />
               </div>
               <div className="mb-3 font-mono text-[10px] text-foreground-muted">
                 {agent.role}

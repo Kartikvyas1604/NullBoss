@@ -2,6 +2,7 @@
 
 import { useTradeFeed } from '@/app/hooks/useTradeFeed'
 import { HeartbeatIndicator } from '@/app/components/HeartbeatIndicator'
+import { SectionHeader } from '@/app/components/SectionHeader'
 import { formatUsd, formatTimeAgo, formatAddress } from '@/app/lib/formatters'
 
 const TRADE_COLORS = {
@@ -17,13 +18,8 @@ export default function TradesPage() {
 
   return (
     <main className="mx-auto max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl tracking-tight">Trade Feed</h1>
-          <p className="mt-1 font-mono text-xs text-foreground-muted">
-            Real-time on-chain activity — streaming from agent execution
-          </p>
-        </div>
+      <div className="mb-8 flex items-start justify-between">
+        <SectionHeader title="Trade Feed" subtitle="Real-time on-chain activity — streaming from agent execution" accent="cyan" />
         <div className="flex items-center gap-4">
           <HeartbeatIndicator />
           <button
