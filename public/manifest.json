@@ -1,0 +1,16 @@
+{
+  "name": "NULLBOSS — The Fund That Has No Boss",
+  "short_name": "NULLBOSS",
+  "description": "An autonomous AI hedge fund on Avalanche C-Chain",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0B0D",
+  "theme_color": "#0A0B0D",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

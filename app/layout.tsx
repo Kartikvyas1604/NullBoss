@@ -32,6 +32,10 @@ export const metadata: Metadata = {
   description:
     "An autonomous AI hedge fund on Avalanche C-Chain. No managers. No emotions. No sleep.",
   themeColor: "#0A0B0D",
+  manifest: "/manifest.json",
+  icons: {
+    apple: "/favicon.ico",
+  },
   openGraph: {
     title: "NULLBOSS — The Fund That Has No Boss",
     description:
