@@ -3,6 +3,7 @@ import { JetBrains_Mono, Fraunces, Unbounded } from "next/font/google";
 import { Providers } from "./providers";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
+import { SystemStatus } from "./components/SystemStatus";
 import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
 
@@ -29,7 +30,16 @@ export const metadata: Metadata = {
   title: "NULLBOSS — The Fund That Has No Boss",
   description:
     "An autonomous AI hedge fund on Avalanche C-Chain. No managers. No emotions. No sleep.",
+  themeColor: "#0A0B0D",
   openGraph: {
+    title: "NULLBOSS — The Fund That Has No Boss",
+    description:
+      "An autonomous AI hedge fund on Avalanche C-Chain. No managers. No emotions. No sleep.",
+    type: "website",
+    siteName: "NULLBOSS",
+  },
+  twitter: {
+    card: "summary_large_image",
     title: "NULLBOSS — The Fund That Has No Boss",
     description:
       "An autonomous AI hedge fund on Avalanche C-Chain. No managers. No emotions. No sleep.",
@@ -51,6 +61,7 @@ export default function RootLayout({
           <div className="relative flex flex-1 flex-col">
             <Header />
             <div className="flex-1 reveal">{children}</div>
+            <SystemStatus />
             <Footer />
           </div>
         </Providers>
