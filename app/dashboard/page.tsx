@@ -3,12 +3,15 @@
 import { useAccount, useBalance } from 'wagmi'
 import { AnimatedNumber } from '@/app/components/AnimatedNumber'
 import { HeartbeatIndicator } from '@/app/components/HeartbeatIndicator'
+import { DataRow } from '@/app/components/DataRow'
+import { SectionHeader } from '@/app/components/SectionHeader'
+import { Skeleton, SkeletonCard } from '@/app/components/Skeleton'
 import { useFundState } from '@/app/hooks/useFundState'
 import { formatUsd, formatPercent, formatCompactUsd } from '@/app/lib/formatters'
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount()
-  const { state } = useFundState()
+  const { state, isLoading } = useFundState()
   const { data: balance } = useBalance({ address })
 
   const shareBalance = isConnected ? 842.5 : 0
@@ -17,29 +20,35 @@ export default function DashboardPage() {
   const pnl = shareValue - costBasis
   const pnlPercent = costBasis > 0 ? ((pnl / costBasis) * 100) : 0
 
+  if (isLoading) {
+    return (
+      <main className="mx-auto max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <Skeleton className="mb-2 h-8 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <SkeletonCard />
+          </div>
+          <SkeletonCard />
+          <div className="lg:col-span-2">
+            <SkeletonCard />
+          </div>
+          <SkeletonCard />
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="mx-auto max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl tracking-tight">Dashboard</h1>
-          <p className="mt-1 font-mono text-xs text-foreground-muted">
-            Your position in the fund
-          </p>
-        </div>
+      <div className="mb-8 flex items-start justify-between">
+        <SectionHeader title="Dashboard" subtitle="Your position in the fund" accent="cyan" />
         <HeartbeatIndicator />
       </div>
 
       {!isConnected ? (
-        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-border p-16 text-center">
-          <div className="mb-4 font-mono text-4xl text-foreground-muted">[ ]</div>
-          <p className="font-mono text-sm text-foreground-muted">
-            Connect your wallet to view your position.
-          </p>
-          <p className="mt-1 font-mono text-xs text-foreground-muted">
-            Avalanche C-Chain · chainId 43114
-          </p>
-        </div>
-      ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Position Summary */}
           <div className="rounded-lg border border-border bg-surface p-6 lg:col-span-2">
@@ -106,27 +115,10 @@ export default function DashboardPage() {
             <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
               Fund Snapshot
             </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-foreground-muted">NAV</span>
-                <span className="font-mono text-sm text-accent-cyan">
-                  ${state.nav.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-foreground-muted">TVL</span>
-                <span className="font-mono text-sm text-foreground">
-                  {formatCompactUsd(state.totalValueLocked)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-foreground-muted">
-                  Inception Return
-                </span>
-                <span className="font-mono text-sm text-accent-green">
-                  +{state.sinceInceptionReturn.toFixed(2)}%
-                </span>
-              </div>
+            <div className="space-y-1">
+              <DataRow label="NAV" value={`$${state.nav.toFixed(2)}`} valueColor="text-accent-cyan" />
+              <DataRow label="TVL" value={formatCompactUsd(state.totalValueLocked)} />
+              <DataRow label="Inception Return" value={`+${state.sinceInceptionReturn.toFixed(2)}%`} valueColor="text-accent-green" />
             </div>
           </div>
 
@@ -168,31 +160,16 @@ export default function DashboardPage() {
             <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
               Wallet
             </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-foreground-muted">
-                  Address
-                </span>
-                <span className="font-mono text-xs text-foreground">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-foreground-muted">
-                  AVAX Balance
-                </span>
-                <span className="font-mono text-xs text-foreground">
-                  {balance ? `${parseFloat(balance.formatted).toFixed(4)} AVAX` : '—'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-foreground-muted">
-                  Network
-                </span>
-                <span className="font-mono text-xs text-accent-cyan">
-                  Avalanche C-Chain
-                </span>
-              </div>
+            <div className="space-y-1">
+              <DataRow
+                label="Address"
+                value={address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '—'}
+              />
+              <DataRow
+                label="AVAX Balance"
+                value={balance ? `${parseFloat(balance.formatted).toFixed(4)} AVAX` : '—'}
+              />
+              <DataRow label="Network" value="Avalanche C-Chain" valueColor="text-accent-cyan" />
             </div>
           </div>
         </div>

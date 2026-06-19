@@ -2,6 +2,7 @@
 
 import { useNavHistory } from '@/app/hooks/useNavHistory'
 import { HeartbeatIndicator } from '@/app/components/HeartbeatIndicator'
+import { SectionHeader } from '@/app/components/SectionHeader'
 import { MOCK_CONTRACTS, FEE_STRUCTURE } from '@/app/data/mockData'
 import { formatUsd, formatDate, formatCompactUsd } from '@/app/lib/formatters'
 import {
@@ -25,13 +26,8 @@ export default function TransparencyPage() {
 
   return (
     <main className="mx-auto max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl tracking-tight">Track Record</h1>
-          <p className="mt-1 font-mono text-xs text-foreground-muted">
-            On-chain proof-of-performance — every number is verifiable
-          </p>
-        </div>
+      <div className="mb-8 flex items-start justify-between">
+        <SectionHeader title="Track Record" subtitle="On-chain proof-of-performance — every number is verifiable" accent="cyan" />
         <HeartbeatIndicator />
       </div>
 
