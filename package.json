@@ -1,14 +1,27 @@
 {
-  "name": "avalanch-speedrun",
+  "name": "nullboss-protocol",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:api": "turbo dev --filter=@nullboss/api",
+    "dev:agents": "turbo dev --filter=@nullboss/orchestrator",
     "build": "next build",
+    "build:contracts": "cd contracts && forge build",
+    "build:all": "turbo build",
     "start": "next start",
-    "lint": "eslint"
+    "test": "cd contracts && forge test",
+    "test:all": "turbo test",
+    "lint": "eslint",
+    "typecheck": "turbo typecheck",
+    "clean": "turbo clean",
+    "deploy:fuji": "cd contracts && forge script script/Deploy.s.sol --rpc-url https://api.avax-test.network/ext/bc/C/rpc --broadcast --verify",
+    "deploy:mainnet": "cd contracts && forge script script/Deploy.s.sol --rpc-url https://api.avax.network/ext/bc/C/rpc --broadcast --verify",
+    "format": "prettier --write \"**/*.{ts,tsx,sol,json}\""
   },
   "dependencies": {
+    "@nullboss/types": "workspace:*",
+    "@nullboss/x402": "workspace:*",
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@tanstack/react-query": "^5.101.0",
     "next": "16.2.9",
@@ -25,7 +38,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "prettier": "^3",
     "tailwindcss": "^4",
+    "turbo": "^2",
     "typescript": "^5"
   }
 }

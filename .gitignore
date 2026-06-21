@@ -39,3 +39,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# foundry / contracts
+contracts/out/
+contracts/cache/
+contracts/lib/openzeppelin-contracts/
+contracts/lib/openzeppelin-contracts-upgradeable/
+contracts/lib/forge-std/
+contracts/broadcast/
+
+# packages & api dist
+packages/*/.dist/
+agents/.dist/
+agents/packages/*/.dist/
+api/.dist/
+
+# turbo
+.turbo/
