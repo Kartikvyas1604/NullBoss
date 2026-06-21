@@ -11,7 +11,7 @@ export function Footer() {
           </span>
         </div>
 
-        <nav className="flex items-center gap-6">
+        <nav className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
           <a
             href="https://snowtrace.io"
             target="_blank"

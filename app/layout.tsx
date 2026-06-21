@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Fraunces, Unbounded } from "next/font/google";
 import { Providers } from "./providers";
 import { Header } from "./components/Header";
@@ -43,15 +43,20 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "NULLBOSS",
   },
-  other: {
-    "theme-color": "#0A0B0D",
-  },
+  other: {},
   twitter: {
     card: "summary_large_image",
     title: "NULLBOSS — The Fund That Has No Boss",
     description:
       "An autonomous AI hedge fund on Avalanche C-Chain. No managers. No emotions. No sleep.",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A0B0D",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

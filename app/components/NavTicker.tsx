@@ -27,12 +27,12 @@ export function NavTicker() {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
         <div className="reveal reveal-delay-1">
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
             NAV / Share
           </div>
-          <div className="font-mono text-2xl font-medium text-accent-cyan glow-text-cyan md:text-3xl">
+          <div className="font-mono text-xl font-medium text-accent-cyan glow-text-cyan sm:text-2xl md:text-3xl">
             <AnimatedNumber value={state.nav} prefix="$" />
           </div>
         </div>
@@ -41,7 +41,7 @@ export function NavTicker() {
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
             TVL
           </div>
-          <div className="font-mono text-2xl font-medium text-foreground md:text-3xl">
+          <div className="font-mono text-xl font-medium text-foreground sm:text-2xl md:text-3xl">
             {formatCompactUsd(state.totalValueLocked)}
           </div>
         </div>
@@ -50,7 +50,7 @@ export function NavTicker() {
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
             Shares Outstanding
           </div>
-          <div className="font-mono text-2xl font-medium text-foreground md:text-3xl">
+          <div className="font-mono text-xl font-medium text-foreground sm:text-2xl md:text-3xl">
             <AnimatedNumber value={state.sharesOutstanding} decimals={0} />
           </div>
         </div>
@@ -59,7 +59,7 @@ export function NavTicker() {
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
             Since Inception
           </div>
-          <div className="font-mono text-2xl font-medium text-accent-green glow-text-green md:text-3xl">
+          <div className="font-mono text-xl font-medium text-accent-green glow-text-green sm:text-2xl md:text-3xl">
             +<AnimatedNumber value={state.sinceInceptionReturn} suffix="%" />
           </div>
         </div>

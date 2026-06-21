@@ -43,6 +43,7 @@ next-env.d.ts
 # foundry / contracts
 contracts/out/
 contracts/cache/
+contracts/foundry.lock
 contracts/lib/openzeppelin-contracts/
 contracts/lib/openzeppelin-contracts-upgradeable/
 contracts/lib/forge-std/

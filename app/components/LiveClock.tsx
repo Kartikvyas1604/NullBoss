@@ -14,8 +14,13 @@ export function LiveClock() {
   if (!time) return null
 
   return (
-    <span className="font-mono text-[10px] text-foreground-muted tabular-nums">
-      {time.toLocaleTimeString('en-US', { hour12: false })}
-    </span>
+    <>
+      <span className="hidden sm:inline font-mono text-[10px] text-foreground-muted tabular-nums">
+        {time.toLocaleTimeString('en-US', { hour12: false })}
+      </span>
+      <span className="sm:hidden font-mono text-[9px] text-foreground-muted tabular-nums">
+        {time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+      </span>
+    </>
   )
 }

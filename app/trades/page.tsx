@@ -36,28 +36,28 @@ export default function TradesPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-surface">
-              <th className="whitespace-nowrap px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+              <th className="whitespace-nowrap px-2 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted sm:px-4">
                 Time
               </th>
-              <th className="whitespace-nowrap px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+              <th className="whitespace-nowrap px-2 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted sm:px-4">
                 Type
               </th>
-              <th className="whitespace-nowrap px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+              <th className="whitespace-nowrap px-2 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted sm:px-4">
                 Agent
               </th>
-              <th className="whitespace-nowrap px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+              <th className="whitespace-nowrap px-2 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted sm:px-4">
                 Protocol
               </th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+              <th className="whitespace-nowrap px-2 py-3 text-right font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted sm:px-4">
                 In
               </th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+              <th className="whitespace-nowrap px-2 py-3 text-right font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted sm:px-4">
                 Out
               </th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+              <th className="whitespace-nowrap px-2 py-3 text-right font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted sm:px-4">
                 Value
               </th>
-              <th className="whitespace-nowrap px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+              <th className="whitespace-nowrap px-2 py-3 text-left font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted sm:px-4">
                 Tx
               </th>
             </tr>
@@ -80,10 +80,10 @@ export default function TradesPage() {
                     i < 3 ? 'bg-accent-red-dim/5' : ''
                   }`}
                 >
-                  <td className="whitespace-nowrap px-4 py-3 text-foreground-muted">
+                  <td className="whitespace-nowrap px-2 py-3 text-foreground-muted sm:px-4">
                     {formatTimeAgo(trade.timestamp)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3">
+                  <td className="whitespace-nowrap px-2 py-3 sm:px-4">
                     <span
                       className={
                         TRADE_COLORS[trade.type as keyof typeof TRADE_COLORS]
@@ -92,22 +92,22 @@ export default function TradesPage() {
                       {trade.type.toUpperCase()}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-foreground-muted">
+                  <td className="whitespace-nowrap px-2 py-3 text-foreground-muted sm:px-4">
                     {trade.agent}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-foreground-muted">
+                  <td className="whitespace-nowrap px-2 py-3 text-foreground-muted sm:px-4">
                     {trade.protocol}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-foreground">
+                  <td className="whitespace-nowrap px-2 py-3 text-right text-foreground sm:px-4">
                     {trade.amountIn.toFixed(2)} {trade.tokenIn}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-foreground">
+                  <td className="whitespace-nowrap px-2 py-3 text-right text-foreground sm:px-4">
                     {trade.amountOut.toFixed(2)} {trade.tokenOut}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-foreground">
+                  <td className="whitespace-nowrap px-2 py-3 text-right text-foreground sm:px-4">
                     {formatUsd(trade.valueUsd)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 font-mono text-[10px] text-foreground-muted">
+                  <td className="whitespace-nowrap px-2 py-3 font-mono text-[10px] text-foreground-muted sm:px-4">
                     <a
                       href={`https://snowtrace.io/tx/${trade.txHash}`}
                       target="_blank"

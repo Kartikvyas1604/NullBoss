@@ -19,8 +19,8 @@ export function StatsSection() {
       </div>
 
       <div className="grid gap-8 md:grid-cols-2">
-        <div className="rounded-lg border border-border bg-surface p-6">
-          <h2 className="mb-4 font-display text-xl tracking-tight">Fee Structure</h2>
+        <div className="rounded-lg border border-border bg-surface p-4 sm:p-6">
+          <h2 className="mb-4 font-display text-lg tracking-tight sm:text-xl">Fee Structure</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
@@ -61,8 +61,8 @@ export function StatsSection() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-6">
-          <h2 className="mb-4 font-display text-xl tracking-tight">How It Works</h2>
+        <div className="rounded-lg border border-border bg-surface p-4 sm:p-6">
+          <h2 className="mb-4 font-display text-lg tracking-tight sm:text-xl">How It Works</h2>
           <div className="space-y-4">
             {[
               {

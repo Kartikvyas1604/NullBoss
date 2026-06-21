@@ -34,13 +34,13 @@ function AgentNode({
     <div className="relative flex flex-col items-center">
       <div
         className={`relative flex items-center justify-center rounded-full border-2 ${colors.border} ${colors.glow} ${
-          isParent ? 'h-28 w-28 md:h-36 md:w-36' : 'h-24 w-24 md:h-28 md:w-28'
+          isParent ? 'h-24 w-24 sm:h-28 sm:w-28 md:h-36 md:w-36' : 'h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28'
         } ${colors.bg} transition-all duration-500`}
       >
         <div className="text-center">
           <div
             className={`font-mono font-bold tracking-wider ${
-              isParent ? 'text-sm md:text-base' : 'text-[10px] md:text-xs'
+              isParent ? 'text-xs sm:text-sm md:text-base' : 'text-[9px] sm:text-[10px] md:text-xs'
             }`}
             style={{ color: AGENT_STROKES[agent.color] }}
           >
@@ -91,7 +91,7 @@ function ConnectingLines({ agents }: { agents: { id: string; color: string; stat
   return (
     <svg
       ref={svgRef}
-      className="absolute inset-0 h-full w-full"
+      className="absolute inset-0 hidden h-full w-full sm:block"
       style={{ pointerEvents: 'none' }}
       preserveAspectRatio="none"
     >
@@ -167,7 +167,7 @@ export default function AgentsPage() {
         <HeartbeatIndicator />
       </div>
 
-      <div className="relative flex min-h-[500px] flex-1 flex-col items-center justify-center rounded-lg border border-border bg-surface/30 py-12">
+      <div className="relative flex min-h-[400px] flex-1 flex-col items-center justify-center rounded-lg border border-border bg-surface/30 py-12 sm:min-h-[500px]">
         <ConnectingLines agents={subAgents} />
 
         {/* Parent Agent */}
@@ -188,12 +188,12 @@ export default function AgentsPage() {
         </div>
 
         {/* Sub-agents row */}
-        <div className="relative z-10 grid w-full max-w-3xl grid-cols-3 gap-4 md:gap-8">
+        <div className="relative z-10 grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-3 md:gap-8">
           {subAgents.map((agent) => (
             <div key={agent.id} className="flex justify-center">
               <div className="flex flex-col items-center">
                 <AgentNode agent={agent} />
-                <div className="mt-3 max-w-[140px] text-center">
+                <div className="mt-3 max-w-[180px] text-center sm:max-w-[140px]">
                   <div className="font-mono text-[10px] leading-tight text-foreground-muted">
                     {agent.role}
                   </div>

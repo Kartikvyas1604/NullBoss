@@ -21,8 +21,8 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
             <span className="inline-flex h-2 w-2 rounded-full bg-accent-green heartbeat" />
             <span
               className="font-display text-lg font-semibold tracking-wider text-foreground"
@@ -62,8 +62,9 @@ export function Header() {
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded border border-border font-mono text-xs text-foreground-muted md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded border border-border font-mono text-sm text-foreground-muted md:hidden"
             aria-label="Toggle navigation"
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? '✕' : '☰'}
           </button>

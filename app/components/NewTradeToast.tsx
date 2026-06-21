@@ -26,7 +26,7 @@ export function NewTradeToast() {
   if (!visible || !latest) return null
 
   return (
-    <div className="fixed right-4 top-20 z-40 animate-slide-in rounded border border-accent-green bg-surface px-4 py-3 shadow-lg">
+    <div className="fixed right-4 top-20 z-40 max-w-[calc(100vw-2rem)] animate-slide-in rounded border border-accent-green bg-surface px-4 py-3 shadow-lg">
       <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-accent-green">
         New Trade Executed
       </div>

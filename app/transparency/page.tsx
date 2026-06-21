@@ -31,44 +31,44 @@ export default function TransparencyPage() {
         <HeartbeatIndicator />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-4">
+      <div className="grid gap-4 lg:gap-6 lg:grid-cols-4">
         {/* Performance metrics */}
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="rounded-lg border border-border bg-surface p-3 sm:p-4">
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
             Total Return
           </div>
-          <div className="font-mono text-2xl text-accent-green glow-text-green">
+          <div className="font-mono text-xl text-accent-green glow-text-green sm:text-2xl">
             +{totalReturn.toFixed(2)}%
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="rounded-lg border border-border bg-surface p-3 sm:p-4">
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
             Peak NAV
           </div>
-          <div className="font-mono text-2xl text-accent-cyan">
+          <div className="font-mono text-xl text-accent-cyan sm:text-2xl">
             {formatUsd(peak)}
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="rounded-lg border border-border bg-surface p-3 sm:p-4">
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
             Current NAV
           </div>
-          <div className="font-mono text-2xl text-foreground">
+          <div className="font-mono text-xl text-foreground sm:text-2xl">
             {formatUsd(endNav)}
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="rounded-lg border border-border bg-surface p-3 sm:p-4">
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
             Max Drawdown
           </div>
-          <div className="font-mono text-2xl text-accent-red">
+          <div className="font-mono text-xl text-accent-red sm:text-2xl">
             {maxDrawdown.toFixed(2)}%
           </div>
         </div>
       </div>
 
       {/* Full NAV Chart */}
-      <div className="mt-6 rounded-lg border border-border bg-surface p-6">
+      <div className="mt-6 rounded-lg border border-border bg-surface p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
             Historical NAV Curve (1 Year)
@@ -82,7 +82,7 @@ export default function TransparencyPage() {
             LOADING CHART DATA...
           </div>
         ) : (
-          <div className="h-80 w-full">
+          <div className="h-56 w-full sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>

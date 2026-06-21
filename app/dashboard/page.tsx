@@ -49,18 +49,18 @@ export default function DashboardPage() {
       </div>
 
       {isConnected && (
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 lg:gap-6 lg:grid-cols-3">
           {/* Position Summary */}
-          <div className="rounded-lg border border-border bg-surface p-6 lg:col-span-2">
+          <div className="rounded-lg border border-border bg-surface p-4 sm:p-6 lg:col-span-2">
             <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
               Position Summary
             </h2>
-            <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-4">
               <div>
                 <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
                   Share Balance
                 </div>
-                <div className="font-mono text-2xl text-foreground">
+                <div className="font-mono text-xl text-foreground sm:text-2xl">
                   <AnimatedNumber value={shareBalance} decimals={2} />
                 </div>
               </div>
@@ -68,7 +68,7 @@ export default function DashboardPage() {
                 <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
                   Share Value
                 </div>
-                <div className="font-mono text-2xl text-accent-cyan">
+                <div className="font-mono text-xl text-accent-cyan sm:text-2xl">
                   <AnimatedNumber value={shareValue} prefix="$" decimals={2} />
                 </div>
               </div>
@@ -76,7 +76,7 @@ export default function DashboardPage() {
                 <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
                   Cost Basis
                 </div>
-                <div className="font-mono text-2xl text-foreground">
+                <div className="font-mono text-xl text-foreground sm:text-2xl">
                   {formatUsd(costBasis)}
                 </div>
               </div>
@@ -85,7 +85,7 @@ export default function DashboardPage() {
                   P&L
                 </div>
                 <div
-                  className={`font-mono text-2xl ${
+                  className={`font-mono text-xl sm:text-2xl ${
                     pnl >= 0
                       ? 'text-accent-green glow-text-green'
                       : 'text-accent-red glow-text-red'
@@ -111,7 +111,7 @@ export default function DashboardPage() {
           </div>
 
           {/* NAV Info */}
-          <div className="rounded-lg border border-border bg-surface p-6">
+          <div className="rounded-lg border border-border bg-surface p-4 sm:p-6">
             <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
               Fund Snapshot
             </h2>
@@ -123,7 +123,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Actions */}
-          <div className="rounded-lg border border-border bg-surface p-6 lg:col-span-2">
+          <div className="rounded-lg border border-border bg-surface p-4 sm:p-6 lg:col-span-2">
             <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
               Transactions
             </h2>
@@ -156,7 +156,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Wallet Info */}
-          <div className="rounded-lg border border-border bg-surface p-6">
+          <div className="rounded-lg border border-border bg-surface p-4 sm:p-6">
             <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
               Wallet
             </h2>
@@ -176,7 +176,7 @@ export default function DashboardPage() {
       )}
 
       {!isConnected && (
-        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-border p-16 text-center">
+        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-border p-8 text-center sm:p-16">
           <div className="mb-4 font-mono text-4xl text-foreground-muted">[ ]</div>
           <p className="font-mono text-sm text-foreground-muted">
             Connect your wallet to view your position.
