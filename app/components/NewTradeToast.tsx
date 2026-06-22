@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useTradeFeed } from '@/app/hooks/useTradeFeed'
-import { formatCompactUsd } from '@/app/lib/formatters'
 
 export function NewTradeToast() {
   const { trades } = useTradeFeed()
@@ -26,15 +25,15 @@ export function NewTradeToast() {
   if (!visible || !latest) return null
 
   return (
-    <div className="fixed right-4 top-20 z-40 max-w-[calc(100vw-2rem)] animate-slide-in rounded border border-accent-green bg-surface px-4 py-3 shadow-lg">
-      <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-accent-green">
+    <div className="fixed right-4 top-20 z-40 max-w-[calc(100vw-2rem)] animate-slide-in rounded border border-accent-cyan bg-surface px-4 py-3 shadow-lg">
+      <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-accent-cyan">
         New Trade Executed
       </div>
       <div className="font-mono text-xs text-foreground">
-        {latest.type.toUpperCase()} · {latest.agent} · {latest.protocol}
+        {latest.type.toUpperCase()} · {latest.agent}
       </div>
       <div className="font-mono text-[10px] text-foreground-muted">
-        {formatCompactUsd(latest.valueUsd)} · {latest.tokenIn} → {latest.tokenOut}
+        ${latest.valueUsd.toFixed(2)} · {latest.tokenIn} → {latest.tokenOut}
       </div>
     </div>
   )

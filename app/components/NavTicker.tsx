@@ -3,16 +3,29 @@
 import { useFundState } from '@/app/hooks/useFundState'
 import { AnimatedNumber } from './AnimatedNumber'
 import { HeartbeatIndicator } from './HeartbeatIndicator'
-import { formatCompactUsd } from '@/app/lib/formatters'
 
 export function NavTicker() {
-  const { state, isLoading } = useFundState()
+  const { state, isLoading, notDeployed } = useFundState()
 
   if (isLoading) {
     return (
       <div className="grid-bg border border-border p-6">
         <div className="font-mono text-xs text-foreground-muted animate-pulse">
           INITIALIZING SYSTEM...
+        </div>
+      </div>
+    )
+  }
+
+  if (notDeployed || !state) {
+    return (
+      <div className="grid-bg border border-border p-6">
+        <div className="mb-3 flex items-center justify-between">
+          <HeartbeatIndicator />
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground-muted">STANDBY</span>
+        </div>
+        <div className="font-mono text-xs text-foreground-muted">
+          Fund not yet deployed — live data will appear post-deployment.
         </div>
       </div>
     )
@@ -42,7 +55,7 @@ export function NavTicker() {
             TVL
           </div>
           <div className="font-mono text-xl font-medium text-foreground sm:text-2xl md:text-3xl">
-            {formatCompactUsd(state.totalValueLocked)}
+            ${(state.totalValueLocked / 1_000_000).toFixed(2)}M
           </div>
         </div>
 

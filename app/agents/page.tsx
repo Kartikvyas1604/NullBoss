@@ -65,7 +65,7 @@ function AgentNode({
         </div>
         {!isParent && (
           <div className="mt-2 font-mono text-[10px] text-foreground-muted">
-            {formatCompactUsd(agent.feesGenerated)} fees · {agent.tradesExecuted} trades
+            {agent.tradesExecuted} trades
           </div>
         )}
       </div>
@@ -104,49 +104,45 @@ function ConnectingLines({ agents }: { agents: { id: string; color: string; stat
         ))}
       </defs>
 
-      {/* We use viewBox-based percentage coordinates calculated on mount */}
-      {agents.map((agent, i) => {
-        const colors = AGENT_COLORS[agent.color as keyof typeof AGENT_COLORS]
-        return (
-          <g key={agent.id}>
-            <line
-              x1="50%"
-              y1="22%"
-              x2={`${20 + i * 30}%`}
-              y2="62%"
-              stroke={`url(#org-line-${agent.color})`}
-              strokeWidth={1.5}
-              opacity={0.35}
-            />
-            <line
-              x1="50%"
-              y1="22%"
-              x2={`${20 + i * 30}%`}
-              y2="62%"
-              stroke={AGENT_STROKES[agent.color]}
-              strokeWidth={1}
-              strokeDasharray="4 4"
-              className="signal-line"
-              opacity={agent.status === 'active' ? 0.7 : 0.2}
-            />
-            <circle
-              cx={`${20 + i * 30}%`}
-              cy="62%"
-              r="42"
-              fill="none"
-              stroke={AGENT_STROKES[agent.color]}
-              strokeWidth={0.5}
-              opacity={0.15}
-            />
-          </g>
-        )
-      })}
+      {agents.map((agent, i) => (
+        <g key={agent.id}>
+          <line
+            x1="50%"
+            y1="22%"
+            x2={`${20 + i * 30}%`}
+            y2="62%"
+            stroke={`url(#org-line-${agent.color})`}
+            strokeWidth={1.5}
+            opacity={0.35}
+          />
+          <line
+            x1="50%"
+            y1="22%"
+            x2={`${20 + i * 30}%`}
+            y2="62%"
+            stroke={AGENT_STROKES[agent.color]}
+            strokeWidth={1}
+            strokeDasharray="4 4"
+            className="signal-line"
+            opacity={agent.status === 'active' ? 0.7 : 0.2}
+          />
+          <circle
+            cx={`${20 + i * 30}%`}
+            cy="62%"
+            r="42"
+            fill="none"
+            stroke={AGENT_STROKES[agent.color]}
+            strokeWidth={0.5}
+            opacity={0.15}
+          />
+        </g>
+      ))}
     </svg>
   )
 }
 
 export default function AgentsPage() {
-  const { agents, isLoading } = useAgentStatus()
+  const { agents, isLoading, notDeployed } = useAgentStatus()
   const parent = agents.find((a) => a.parentId === null)
   const subAgents = agents.filter((a) => a.parentId !== null)
 
@@ -160,34 +156,61 @@ export default function AgentsPage() {
     )
   }
 
+  if (notDeployed) {
+    return (
+      <main className="mx-auto flex max-w-7xl flex-1 flex-col items-center justify-center px-4">
+        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-border p-8 text-center sm:p-16">
+          <div className="mb-4 font-mono text-4xl text-foreground-muted">[ ]</div>
+          <p className="font-mono text-sm text-foreground-muted">
+            Agent Registry not yet deployed
+          </p>
+          <p className="mt-1 font-mono text-xs text-foreground-muted">
+            Once the AgentRegistry contract is deployed, agent hierarchy will display here.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
+  if (agents.length === 0) {
+    return (
+      <main className="mx-auto flex max-w-7xl flex-1 flex-col items-center justify-center px-4">
+        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-border p-8 text-center sm:p-16">
+          <div className="mb-4 font-mono text-4xl text-foreground-muted">[~]</div>
+          <p className="font-mono text-sm text-foreground-muted">
+            No agents registered yet
+          </p>
+          <p className="mt-1 font-mono text-xs text-foreground-muted">
+            Agents will appear here once they register on-chain.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="mx-auto flex max-w-7xl flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 flex items-start justify-between">
-        <SectionHeader title="Agent Network" subtitle="Hierarchical intelligence — one parent, three specialized sub-agents" accent="cyan" />
+        <SectionHeader title="Agent Network" subtitle="On-chain agent hierarchy — registered via AgentRegistry" accent="cyan" />
         <HeartbeatIndicator />
       </div>
 
       <div className="relative flex min-h-[400px] flex-1 flex-col items-center justify-center rounded-lg border border-border bg-surface/30 py-12 sm:min-h-[500px]">
         <ConnectingLines agents={subAgents} />
 
-        {/* Parent Agent */}
-        <div className="relative z-10 mb-16">
-          {parent && (
+        {parent && (
+          <div className="relative z-10 mb-16">
             <div className="flex flex-col items-center">
               <AgentNode agent={parent} isParent />
               <div className="mt-3 text-center">
                 <div className="font-mono text-xs leading-tight text-accent-cyan">
-                  {parent?.role}
-                </div>
-                <div className="mt-1 font-mono text-[10px] text-foreground-muted">
-                  {formatCompactUsd(parent.feesGenerated)} fees generated
+                  {parent.role}
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Sub-agents row */}
         <div className="relative z-10 grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-3 md:gap-8">
           {subAgents.map((agent) => (
             <div key={agent.id} className="flex justify-center">
@@ -203,10 +226,9 @@ export default function AgentsPage() {
           ))}
         </div>
 
-        {/* Network stats */}
         <div className="relative z-10 mt-16 grid w-full max-w-lg grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border">
           <div className="bg-surface p-4 text-center">
-            <div className="font-mono text-lg text-accent-cyan">4</div>
+            <div className="font-mono text-lg text-accent-cyan">{agents.length}</div>
             <div className="font-mono text-[10px] uppercase text-foreground-muted">Agents</div>
           </div>
           <div className="bg-surface p-4 text-center">
@@ -224,41 +246,38 @@ export default function AgentsPage() {
         </div>
       </div>
 
-      {/* Sub-agent detail cards */}
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
-        {subAgents.map((agent) => {
-          const colors = AGENT_COLORS[agent.color as keyof typeof AGENT_COLORS]
-          return (
-            <div
-              key={agent.id}
-              className={`rounded-lg border ${colors.border} ${colors.bg} p-4`}
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <span
-                  className="font-mono text-sm font-bold tracking-wider"
-                  style={{ color: AGENT_STROKES[agent.color] }}
-                >
-                  {agent.name}
-                </span>
-                <StatusBadge status={agent.status === 'active' ? 'live' : 'standby'} />
-              </div>
-              <div className="mb-3 font-mono text-[10px] text-foreground-muted">
-                {agent.role}
-              </div>
-              <div className="space-y-1 border-t border-border pt-3">
-                <div className="flex justify-between font-mono text-[10px]">
-                  <span className="text-foreground-muted">Fees Generated</span>
-                  <span className="text-foreground">{formatCompactUsd(agent.feesGenerated)}</span>
+      {subAgents.length > 0 && (
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {subAgents.map((agent) => {
+            const colors = AGENT_COLORS[agent.color as keyof typeof AGENT_COLORS]
+            return (
+              <div
+                key={agent.id}
+                className={`rounded-lg border ${colors.border} ${colors.bg} p-4`}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span
+                    className="font-mono text-sm font-bold tracking-wider"
+                    style={{ color: AGENT_STROKES[agent.color] }}
+                  >
+                    {agent.name}
+                  </span>
+                  <StatusBadge status={agent.status === 'active' ? 'live' : 'standby'} />
                 </div>
-                <div className="flex justify-between font-mono text-[10px]">
-                  <span className="text-foreground-muted">Trades</span>
-                  <span className="text-foreground">{agent.tradesExecuted}</span>
+                <div className="mb-3 font-mono text-[10px] text-foreground-muted">
+                  {agent.role}
+                </div>
+                <div className="space-y-1 border-t border-border pt-3">
+                  <div className="flex justify-between font-mono text-[10px]">
+                    <span className="text-foreground-muted">Trades</span>
+                    <span className="text-foreground">{agent.tradesExecuted}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </main>
   )
 }

@@ -1,40 +1,35 @@
 'use client'
 
-import { useAccount, useBalance } from 'wagmi'
+import { useAccount, useBalance, useChainId, useSwitchChain } from 'wagmi'
 import { AnimatedNumber } from '@/app/components/AnimatedNumber'
 import { HeartbeatIndicator } from '@/app/components/HeartbeatIndicator'
 import { DataRow } from '@/app/components/DataRow'
 import { SectionHeader } from '@/app/components/SectionHeader'
-import { Skeleton, SkeletonCard } from '@/app/components/Skeleton'
+import { SkeletonCard } from '@/app/components/Skeleton'
 import { useFundState } from '@/app/hooks/useFundState'
-import { formatUsd, formatPercent, formatCompactUsd } from '@/app/lib/formatters'
+import { formatUsd, formatPercent } from '@/app/lib/formatters'
+import { CHAIN_NAMES } from '@/app/lib/contracts'
+
+const SUPPORTED_CHAIN_IDS = [43114, 43113]
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount()
-  const { state, isLoading } = useFundState()
+  const chainId = useChainId()
+  const { switchChain } = useSwitchChain()
+  const { state, isLoading, notDeployed } = useFundState()
   const { data: balance } = useBalance({ address })
 
-  const shareBalance = isConnected ? 842.5 : 0
-  const shareValue = shareBalance * state.sharePrice
-  const costBasis = isConnected ? 89305 : 0
-  const pnl = shareValue - costBasis
-  const pnlPercent = costBasis > 0 ? ((pnl / costBasis) * 100) : 0
+  const onCorrectNetwork = SUPPORTED_CHAIN_IDS.includes(chainId)
+  const chainName = CHAIN_NAMES[chainId] || `Chain ${chainId}`
 
   if (isLoading) {
     return (
       <main className="mx-auto max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <Skeleton className="mb-2 h-8 w-48" />
-          <Skeleton className="h-4 w-64" />
+          <SkeletonCard />
         </div>
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <SkeletonCard />
-          </div>
-          <SkeletonCard />
-          <div className="lg:col-span-2">
-            <SkeletonCard />
-          </div>
+          <div className="lg:col-span-2"><SkeletonCard /></div>
           <SkeletonCard />
         </div>
       </main>
@@ -48,111 +43,93 @@ export default function DashboardPage() {
         <HeartbeatIndicator />
       </div>
 
-      {isConnected && (
+      {!isConnected && (
+        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-border p-8 text-center sm:p-16">
+          <div className="mb-4 font-mono text-4xl text-foreground-muted">[ ]</div>
+          <p className="font-mono text-sm text-foreground-muted">
+            Connect your wallet to view your position.
+          </p>
+          <p className="mt-1 font-mono text-xs text-foreground-muted">
+            Avalanche C-Chain · chainId 43114
+          </p>
+        </div>
+      )}
+
+      {isConnected && !onCorrectNetwork && (
+        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-accent-red p-8 text-center sm:p-16">
+          <div className="mb-4 font-mono text-4xl text-accent-red glow-text-red">[!]</div>
+          <p className="font-mono text-sm text-accent-red">
+            Wrong network detected
+          </p>
+          <p className="mt-1 font-mono text-xs text-foreground-muted">
+            Connected to {chainName} (chainId {chainId}). Switch to Avalanche C-Chain.
+          </p>
+          <button
+            type="button"
+            onClick={() => switchChain({ chainId: 43114 })}
+            className="mt-4 rounded bg-accent-red px-4 py-2 font-mono text-xs font-medium text-white transition-opacity hover:opacity-90"
+          >
+            [ Switch to Avalanche C-Chain ]
+          </button>
+        </div>
+      )}
+
+      {isConnected && onCorrectNetwork && (
         <div className="grid gap-4 lg:gap-6 lg:grid-cols-3">
           {/* Position Summary */}
           <div className="rounded-lg border border-border bg-surface p-4 sm:p-6 lg:col-span-2">
             <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
               Position Summary
             </h2>
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-4">
-              <div>
-                <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
-                  Share Balance
+            {notDeployed || !state ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="mb-2 font-mono text-xs text-accent-amber">Fund not yet deployed</div>
+                <p className="font-mono text-[10px] text-foreground-muted">
+                  Vault contract address not configured. Position data will appear once deployed.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-4">
+                <div>
+                  <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+                    NAV / Share
+                  </div>
+                  <div className="font-mono text-xl text-accent-cyan sm:text-2xl">
+                    <AnimatedNumber value={state.nav} prefix="$" decimals={2} />
+                  </div>
                 </div>
-                <div className="font-mono text-xl text-foreground sm:text-2xl">
-                  <AnimatedNumber value={shareBalance} decimals={2} />
+                <div>
+                  <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+                    TVL
+                  </div>
+                  <div className="font-mono text-xl text-foreground sm:text-2xl">
+                    {formatUsd(state.totalValueLocked)}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+                    Shares Outstanding
+                  </div>
+                  <div className="font-mono text-xl text-foreground sm:text-2xl">
+                    <AnimatedNumber value={state.sharesOutstanding} decimals={0} />
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
+                    Since Inception
+                  </div>
+                  <div
+                    className={`font-mono text-xl sm:text-2xl ${
+                      state.sinceInceptionReturn >= 0
+                        ? 'text-accent-green glow-text-green'
+                        : 'text-accent-red glow-text-red'
+                    }`}
+                  >
+                    {formatPercent(state.sinceInceptionReturn, true)}
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
-                  Share Value
-                </div>
-                <div className="font-mono text-xl text-accent-cyan sm:text-2xl">
-                  <AnimatedNumber value={shareValue} prefix="$" decimals={2} />
-                </div>
-              </div>
-              <div>
-                <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
-                  Cost Basis
-                </div>
-                <div className="font-mono text-xl text-foreground sm:text-2xl">
-                  {formatUsd(costBasis)}
-                </div>
-              </div>
-              <div>
-                <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.15em] text-foreground-muted">
-                  P&L
-                </div>
-                <div
-                  className={`font-mono text-xl sm:text-2xl ${
-                    pnl >= 0
-                      ? 'text-accent-green glow-text-green'
-                      : 'text-accent-red glow-text-red'
-                  }`}
-                >
-                  {pnl >= 0 ? '+' : ''}
-                  <AnimatedNumber value={pnl} prefix="$" decimals={2} />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="font-mono text-xs text-foreground-muted">
-                Return: {formatPercent(pnlPercent, true)}
-              </div>
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-border">
-                <div
-                  className="h-full rounded-full bg-accent-green transition-all duration-500"
-                  style={{ width: `${Math.min(100, Math.max(0, pnlPercent * 2))}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* NAV Info */}
-          <div className="rounded-lg border border-border bg-surface p-4 sm:p-6">
-            <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
-              Fund Snapshot
-            </h2>
-            <div className="space-y-1">
-              <DataRow label="NAV" value={`$${state.nav.toFixed(2)}`} valueColor="text-accent-cyan" />
-              <DataRow label="TVL" value={formatCompactUsd(state.totalValueLocked)} />
-              <DataRow label="Inception Return" value={`+${state.sinceInceptionReturn.toFixed(2)}%`} valueColor="text-accent-green" />
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="rounded-lg border border-border bg-surface p-4 sm:p-6 lg:col-span-2">
-            <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
-              Transactions
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded border border-border bg-background p-4">
-                <div className="mb-3 font-mono text-sm text-foreground">Deposit</div>
-                <div className="mb-3 font-mono text-xs text-foreground-muted">
-                  Deposit AVAX or USDC to mint NULLBOSS shares at current NAV.
-                </div>
-                <button
-                  type="button"
-                  className="w-full rounded bg-accent-cyan px-4 py-2 font-mono text-xs font-medium text-black transition-opacity hover:opacity-90"
-                >
-                  [ Deposit ]
-                </button>
-              </div>
-              <div className="rounded border border-border bg-background p-4">
-                <div className="mb-3 font-mono text-sm text-foreground">Withdraw</div>
-                <div className="mb-3 font-mono text-xs text-foreground-muted">
-                  Redeem shares for pro-rata share of vault assets at current NAV.
-                </div>
-                <button
-                  type="button"
-                  className="w-full rounded border border-accent-red px-4 py-2 font-mono text-xs font-medium text-accent-red transition-colors hover:bg-accent-red-dim"
-                >
-                  [ Withdraw ]
-                </button>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Wallet Info */}
@@ -169,21 +146,53 @@ export default function DashboardPage() {
                 label="AVAX Balance"
                 value={balance ? `${(Number(balance.value) / 10 ** balance.decimals).toFixed(4)} AVAX` : '—'}
               />
-              <DataRow label="Network" value="Avalanche C-Chain" valueColor="text-accent-cyan" />
+              <DataRow
+                label="Network"
+                value={chainName}
+                valueColor={onCorrectNetwork ? 'text-accent-green' : 'text-accent-red'}
+              />
             </div>
           </div>
-        </div>
-      )}
 
-      {!isConnected && (
-        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-border p-8 text-center sm:p-16">
-          <div className="mb-4 font-mono text-4xl text-foreground-muted">[ ]</div>
-          <p className="font-mono text-sm text-foreground-muted">
-            Connect your wallet to view your position.
-          </p>
-          <p className="mt-1 font-mono text-xs text-foreground-muted">
-            Avalanche C-Chain · chainId 43114
-          </p>
+          {/* Actions - gated behind connected + correct network */}
+          <div className="rounded-lg border border-border bg-surface p-4 sm:p-6 lg:col-span-2">
+            <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.15em] text-foreground-muted">
+              Transactions
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded border border-border bg-background p-4">
+                <div className="mb-3 font-mono text-sm text-foreground">Deposit</div>
+                <div className="mb-3 font-mono text-xs text-foreground-muted">
+                  Deposit USDC to mint NULLBOSS shares at current NAV.
+                </div>
+                <button
+                  type="button"
+                  disabled={!onCorrectNetwork}
+                  className="w-full rounded bg-accent-cyan px-4 py-2 font-mono text-xs font-medium text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {onCorrectNetwork ? '[ Deposit ]' : '[ Switch Network ]'}
+                </button>
+              </div>
+              <div className="rounded border border-border bg-background p-4">
+                <div className="mb-3 font-mono text-sm text-foreground">Withdraw</div>
+                <div className="mb-3 font-mono text-xs text-foreground-muted">
+                  Redeem shares for pro-rata share of vault assets at current NAV.
+                </div>
+                <button
+                  type="button"
+                  disabled={!onCorrectNetwork}
+                  className="w-full rounded border border-accent-red px-4 py-2 font-mono text-xs font-medium text-accent-red transition-colors hover:bg-accent-red-dim disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {onCorrectNetwork ? '[ Withdraw ]' : '[ Switch Network ]'}
+                </button>
+              </div>
+            </div>
+            {!notDeployed && (
+              <div className="mt-4 font-mono text-[10px] text-foreground-muted text-center">
+                Vault: {process.env.NEXT_PUBLIC_VAULT_ADDRESS?.slice(0, 10)}...{process.env.NEXT_PUBLIC_VAULT_ADDRESS?.slice(-6) || 'not set'}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </main>
