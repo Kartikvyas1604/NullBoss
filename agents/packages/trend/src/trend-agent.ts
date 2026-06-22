@@ -1,4 +1,5 @@
 import { BaseAgent, AgentX402Integration } from '@nullboss/core'
+import { formatUnits } from 'viem'
 import type { AgentConfig } from '@nullboss/core'
 
 const PRICE_FEED = '0x5498BB86BC934c8D34FDA08E81D444153d0D06aD'
@@ -96,7 +97,20 @@ export class TrendAgent extends BaseAgent {
 
     const USDC = '0x5425890298aed601595a70AB815c96711a31Bc65' as const
     const MOCK_ADAPTER = '0x14da13F038Def7E6257e5dCB3EdEbABea37367AC' as const
-    const TRADE_AMOUNT = BigInt(500000)
+
+    const walletBalance = await this.publicClient.readContract({
+      address: USDC,
+      abi: [{ type: 'function' as const, name: 'balanceOf', inputs: [{ type: 'address' as const }], outputs: [{ type: 'uint256' as const }], stateMutability: 'view' as const }],
+      functionName: 'balanceOf',
+      args: [this.account.address],
+    }) as bigint
+
+    const tradeAmount = walletBalance * 60n / 100n
+    if (tradeAmount < BigInt(1000)) {
+      console.log(`[Trend] Wallet balance too low (${formatUnits(walletBalance, 6)} USDC), skipping`)
+      return
+    }
+    console.log(`[Trend] Trading ${formatUnits(tradeAmount, 6)} USDC (wallet: ${formatUnits(walletBalance, 6)} USDC)`)
 
     const allowance = await this.publicClient.readContract({
       address: USDC,
@@ -104,12 +118,12 @@ export class TrendAgent extends BaseAgent {
       functionName: 'allowance',
       args: [this.account.address, this.config.executorAddress],
     }) as bigint
-    if (allowance < TRADE_AMOUNT) {
+    if (allowance < tradeAmount) {
       const hash = await this.walletClient.writeContract({
         address: USDC,
         abi: [{ name: 'approve', type: 'function', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'nonpayable' }],
         functionName: 'approve',
-        args: [this.config.executorAddress, TRADE_AMOUNT * 100n],
+        args: [this.config.executorAddress, BigInt(2) ** BigInt(256) - BigInt(1)],
         chain: null as any,
       })
       console.log(`[Trend] Approved executor, tx: ${hash}`)
@@ -119,10 +133,10 @@ export class TrendAgent extends BaseAgent {
     const txHash = await this.executorClient.executeTradeWithTokenIn(
       MOCK_ADAPTER,
       USDC,
-      TRADE_AMOUNT,
+      tradeAmount,
       data,
       100n,
-      TRADE_AMOUNT,
+      tradeAmount,
     )
     console.log(`[Trend] Trade executed: ${txHash}`)
     this.tradesToday++

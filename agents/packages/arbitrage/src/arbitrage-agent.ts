@@ -1,12 +1,11 @@
 import { BaseAgent } from '@nullboss/core'
 import type { AgentConfig } from '@nullboss/core'
-import { encodeAbiParameters, parseAbiParameters } from 'viem'
+import { encodeAbiParameters, parseAbiParameters, formatUnits } from 'viem'
 
 const MOCK_ADAPTER = '0x14da13F038Def7E6257e5dCB3EdEbABea37367AC'
 const USDC = '0x5425890298aed601595a70AB815c96711a31Bc65'
 const PRICE_FEED = '0x5498BB86BC934c8D34FDA08E81D444153d0D06aD'
 const MAX_SLIPPAGE = 100n
-const TRADE_AMOUNT = BigInt(1) * BigInt(10**6)
 
 const PRICE_FEED_ABI = [
   { type: 'function' as const, name: 'latestRoundData', inputs: [], outputs: [
@@ -96,6 +95,21 @@ export class ArbitrageAgent extends BaseAgent {
       return
     }
 
+    const walletBalance = await this.publicClient.readContract({
+      address: USDC,
+      abi: [{ type: 'function' as const, name: 'balanceOf', inputs: [{ type: 'address' as const }], outputs: [{ type: 'uint256' as const }], stateMutability: 'view' as const }],
+      functionName: 'balanceOf',
+      args: [this.account.address],
+    }) as bigint
+
+    const tradeAmount = walletBalance * 80n / 100n
+    if (tradeAmount < BigInt(1000)) {
+      console.log(`[Arbitrage] Wallet balance too low (${formatUnits(walletBalance, 6)} USDC), skipping`)
+      return
+    }
+
+    console.log(`[Arbitrage] Trading ${formatUnits(tradeAmount, 6)} USDC (wallet: ${formatUnits(walletBalance, 6)} USDC)`)
+
     try {
       if (!this.approved) {
         const allowance = await this.publicClient.readContract({
@@ -104,12 +118,12 @@ export class ArbitrageAgent extends BaseAgent {
           functionName: 'allowance',
           args: [this.account.address, this.config.executorAddress],
         }) as bigint
-        if (allowance < TRADE_AMOUNT) {
+        if (allowance < tradeAmount) {
           const hash = await this.walletClient.writeContract({
             address: USDC,
             abi: [{ name: 'approve', type: 'function', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'nonpayable' }],
             functionName: 'approve',
-            args: [this.config.executorAddress, TRADE_AMOUNT * 100n],
+            args: [this.config.executorAddress, BigInt(2) ** BigInt(256) - BigInt(1)],
             chain: null as any,
           })
           console.log(`[Arbitrage] Approved executor, tx: ${hash}`)
@@ -117,13 +131,13 @@ export class ArbitrageAgent extends BaseAgent {
         this.approved = true
       }
 
-      const data = encodeAbiParameters(parseAbiParameters('uint256'), [TRADE_AMOUNT])
+      const data = encodeAbiParameters(parseAbiParameters('uint256'), [tradeAmount])
       const expectedOut = 1n
 
       const tx = await this.executorClient.executeTradeWithTokenIn(
         MOCK_ADAPTER,
         USDC,
-        TRADE_AMOUNT,
+        tradeAmount,
         data,
         MAX_SLIPPAGE,
         expectedOut,
