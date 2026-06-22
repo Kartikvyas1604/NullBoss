@@ -2,7 +2,7 @@ import { BaseAgent } from '@nullboss/core'
 import type { AgentConfig } from '@nullboss/core'
 import { encodeAbiParameters, parseAbiParameters } from 'viem'
 
-const MOCK_ADAPTER = '0xeE99F15E026E75FF7A215ea01f512f55d8CC1880'
+const MOCK_ADAPTER = '0x14da13F038Def7E6257e5dCB3EdEbABea37367AC'
 const USDC = '0x5425890298aed601595a70AB815c96711a31Bc65'
 const MAX_SLIPPAGE = 100n
 const TRADE_AMOUNT = BigInt(1) * BigInt(10**6)
@@ -10,7 +10,7 @@ const TRADE_AMOUNT = BigInt(1) * BigInt(10**6)
 export class ArbitrageAgent extends BaseAgent {
   private dexPairs: Map<string, { dexA: string, dexB: string, pair: string }> = new Map()
   private currentConfidence: number = 0
-  private readonly MIN_PROFIT_BPS = 50n
+  private readonly MIN_PROFIT_BPS = 10n
   private approved = false
 
   constructor(config: AgentConfig) {
@@ -64,7 +64,7 @@ export class ArbitrageAgent extends BaseAgent {
       }
     }
     
-    if (this.currentConfidence < 10) {
+    if (this.currentConfidence < 1) {
       this.currentConfidence = Math.max(0, this.currentConfidence - 5)
     }
   }
@@ -76,7 +76,8 @@ export class ArbitrageAgent extends BaseAgent {
   }
 
   protected async execute(): Promise<void> {
-    if (this.currentConfidence < 70) {
+    if (this.currentConfidence < 5) {
+      console.log(`[Arbitrage] Confidence too low (${this.currentConfidence}), skipping execution`)
       return
     }
 

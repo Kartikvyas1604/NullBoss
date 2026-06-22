@@ -45,17 +45,25 @@ export function useTradeFeed() {
             x402Receipt: `0x${string}`
             timestamp: bigint
           }
+          const USDC = '0x5425890298aed601595a70AB815c96711a31Bc65'
+          const WAVAX = '0x659b28B7EcAbC69A86052D844e1b366c2098A815'
+
+          const tokenInSymbol = t.tokenIn.toLowerCase() === USDC.toLowerCase() ? 'USDC' : t.tokenIn.toLowerCase() === WAVAX.toLowerCase() ? 'WAVAX' : '???'
+          const tokenOutSymbol = t.tokenOut.toLowerCase() === USDC.toLowerCase() ? 'USDC' : t.tokenOut.toLowerCase() === WAVAX.toLowerCase() ? 'WAVAX' : '???'
+          const tokenInDecimals = tokenInSymbol === 'USDC' ? 6 : 18
+          const tokenOutDecimals = tokenOutSymbol === 'USDC' ? 6 : 18
+
           tradeList.push({
             id: t.tradeId,
             timestamp: Number(t.timestamp) * 1000,
             type: 'buy',
             agent: `Agent #${t.agentId}`,
             protocol: 'DEX',
-            tokenIn: 'USDC',
-            tokenOut: 'USDC',
-            amountIn: Number(t.amountIn) / 1e6,
-            amountOut: Number(t.amountOut) / 1e6,
-            valueUsd: Number(t.amountIn) / 1e6,
+            tokenIn: tokenInSymbol,
+            tokenOut: tokenOutSymbol,
+            amountIn: Number(t.amountIn) / 10 ** tokenInDecimals,
+            amountOut: Number(t.amountOut) / 10 ** tokenOutDecimals,
+            valueUsd: tokenInDecimals === 6 ? Number(t.amountIn) / 1e6 : 0,
             txHash: t.tradeId,
           })
         } catch {

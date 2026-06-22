@@ -67,27 +67,35 @@ export class LiquidationAgent extends BaseAgent {
     if (!target) return
     console.log(`[Liquidation] Liquidating ${target.protocol} position ${target.positionId} for ${this.LIQUIDATION_BONUS_BPS} bps bonus`)
 
-    const balance = await this.walletClient.getBalance({ address: this.config.agentAddress })
-    if (balance < BigInt(1000000)) {
-      console.log('[Liquidation] Insufficient balance, skipping')
-      return
+    const USDC = '0x5425890298aed601595a70AB815c96711a31Bc65' as const
+    const MOCK_ADAPTER = '0x14da13F038Def7E6257e5dCB3EdEbABea37367AC' as const
+    const TRADE_AMOUNT = BigInt(500000)
+
+    const allowance = await this.publicClient.readContract({
+      address: USDC,
+      abi: [{ name: 'allowance', type: 'function', inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' }],
+      functionName: 'allowance',
+      args: [this.account.address, this.config.executorAddress],
+    }) as bigint
+    if (allowance < TRADE_AMOUNT) {
+      const hash = await this.walletClient.writeContract({
+        address: USDC,
+        abi: [{ name: 'approve', type: 'function', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'nonpayable' }],
+        functionName: 'approve',
+        args: [this.config.executorAddress, TRADE_AMOUNT * 100n],
+        chain: null as any,
+      })
+      console.log(`[Liquidation] Approved executor, tx: ${hash}`)
     }
 
-    const usdc = this.config.usdcToken
-    const adapter = this.config.mockTradeAdapter
-    const amountIn = balance / BigInt(2)
     const data = '0x' as `0x${string}`
-    const maxSlippageBps = 100n
-    const expectedMinAmountOut = amountIn
-
-    await this.executorClient.approveToken(usdc, amountIn)
     const txHash = await this.executorClient.executeTradeWithTokenIn(
-      adapter,
-      usdc,
-      amountIn,
+      MOCK_ADAPTER,
+      USDC,
+      TRADE_AMOUNT,
       data,
-      maxSlippageBps,
-      expectedMinAmountOut,
+      100n,
+      TRADE_AMOUNT,
     )
     console.log(`[Liquidation] Trade executed: ${txHash}`)
     this.tradesToday++
