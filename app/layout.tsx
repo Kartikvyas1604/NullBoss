@@ -6,7 +6,6 @@ import { Footer } from "./components/Footer";
 import { SystemStatus } from "./components/SystemStatus";
 import { NewTradeToast } from "./components/NewTradeToast";
 import { PageTitleUpdater } from "./components/PageTitle";
-import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({

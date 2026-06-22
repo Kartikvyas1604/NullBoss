@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { useAccount, useBalance, useChainId, useSwitchChain } from 'wagmi'
 import { AnimatedNumber } from '@/app/components/AnimatedNumber'
 import { HeartbeatIndicator } from '@/app/components/HeartbeatIndicator'
 import { DataRow } from '@/app/components/DataRow'
 import { SectionHeader } from '@/app/components/SectionHeader'
 import { SkeletonCard } from '@/app/components/Skeleton'
+import { VaultActionModal } from '@/app/components/VaultActionModal'
 import { useFundState } from '@/app/hooks/useFundState'
 import { formatUsd, formatPercent } from '@/app/lib/formatters'
 import { CHAIN_NAMES } from '@/app/lib/contracts'
@@ -18,6 +20,8 @@ export default function DashboardPage() {
   const { switchChain } = useSwitchChain()
   const { state, isLoading, notDeployed } = useFundState()
   const { data: balance } = useBalance({ address })
+  const [action, setAction] = useState<'deposit' | 'withdraw' | null>(null)
+  const [switchError, setSwitchError] = useState<string | null>(null)
 
   const onCorrectNetwork = SUPPORTED_CHAIN_IDS.includes(chainId)
   const chainName = CHAIN_NAMES[chainId] || `Chain ${chainId}`
@@ -66,11 +70,23 @@ export default function DashboardPage() {
           </p>
           <button
             type="button"
-            onClick={() => switchChain({ chainId: 43114 })}
+            onClick={async () => {
+              setSwitchError(null)
+              try {
+                await switchChain({ chainId: 43114 })
+              } catch (err) {
+                setSwitchError(err instanceof Error ? err.message : 'Failed to switch chain')
+              }
+            }}
             className="mt-4 rounded bg-accent-red px-4 py-2 font-mono text-xs font-medium text-white transition-opacity hover:opacity-90"
           >
             [ Switch to Avalanche C-Chain ]
           </button>
+          {switchError && (
+            <p className="mt-2 max-w-xs font-mono text-[10px] text-accent-red/80 leading-tight">
+              {switchError}
+            </p>
+          )}
         </div>
       )}
 
@@ -168,6 +184,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   disabled={!onCorrectNetwork}
+                  onClick={() => setAction('deposit')}
                   className="w-full rounded bg-accent-cyan px-4 py-2 font-mono text-xs font-medium text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   {onCorrectNetwork ? '[ Deposit ]' : '[ Switch Network ]'}
@@ -181,6 +198,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   disabled={!onCorrectNetwork}
+                  onClick={() => setAction('withdraw')}
                   className="w-full rounded border border-accent-red px-4 py-2 font-mono text-xs font-medium text-accent-red transition-colors hover:bg-accent-red-dim disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   {onCorrectNetwork ? '[ Withdraw ]' : '[ Switch Network ]'}
@@ -194,6 +212,13 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+      )}
+
+      {action && (
+        <VaultActionModal
+          mode={action}
+          onClose={() => setAction(null)}
+        />
       )}
     </main>
   )

@@ -22,7 +22,6 @@
   "dependencies": {
     "@nullboss/types": "workspace:*",
     "@nullboss/x402": "workspace:*",
-    "@rainbow-me/rainbowkit": "^2.2.11",
     "@tanstack/react-query": "^5.101.0",
     "next": "16.2.9",
     "react": "19.2.4",

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { ConnectWallet } from './ConnectWallet'
 import { LiveClock } from './LiveClock'
 
 const NAV_ITEMS = [
@@ -53,11 +53,7 @@ export function Header() {
 
         <div className="flex items-center gap-3">
           <div className="hidden sm:block">
-            <ConnectButton
-              accountStatus={{ smallScreen: 'avatar', largeScreen: 'full' }}
-              chainStatus={{ smallScreen: 'none', largeScreen: 'full' }}
-              showBalance={false}
-            />
+            <ConnectWallet />
           </div>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -89,11 +85,7 @@ export function Header() {
               </Link>
             ))}
             <div className="py-3 sm:hidden">
-              <ConnectButton
-                accountStatus={{ smallScreen: 'avatar', largeScreen: 'full' }}
-                chainStatus={{ smallScreen: 'none', largeScreen: 'full' }}
-                showBalance={false}
-              />
+              <ConnectWallet />
             </div>
           </nav>
         </div>

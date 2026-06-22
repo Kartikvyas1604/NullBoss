@@ -71,6 +71,99 @@ export const VAULT_ABI = [
     outputs: [{ type: 'address' as const }],
     stateMutability: 'view' as const,
   },
+  {
+    type: 'function' as const,
+    name: 'deposit',
+    inputs: [
+      { type: 'uint256' as const, name: 'assets' },
+      { type: 'address' as const, name: 'receiver' },
+    ],
+    outputs: [{ type: 'uint256' as const }],
+    stateMutability: 'nonpayable' as const,
+  },
+  {
+    type: 'function' as const,
+    name: 'redeem',
+    inputs: [
+      { type: 'uint256' as const, name: 'shares' },
+      { type: 'address' as const, name: 'receiver' },
+      { type: 'address' as const, name: 'owner' },
+    ],
+    outputs: [{ type: 'uint256' as const }],
+    stateMutability: 'nonpayable' as const,
+  },
+  {
+    type: 'function' as const,
+    name: 'maxDeposit',
+    inputs: [{ type: 'address' as const }],
+    outputs: [{ type: 'uint256' as const }],
+    stateMutability: 'view' as const,
+  },
+  {
+    type: 'function' as const,
+    name: 'maxRedeem',
+    inputs: [{ type: 'address' as const }],
+    outputs: [{ type: 'uint256' as const }],
+    stateMutability: 'view' as const,
+  },
+  {
+    type: 'function' as const,
+    name: 'previewDeposit',
+    inputs: [{ type: 'uint256' as const }],
+    outputs: [{ type: 'uint256' as const }],
+    stateMutability: 'view' as const,
+  },
+  {
+    type: 'function' as const,
+    name: 'previewRedeem',
+    inputs: [{ type: 'uint256' as const }],
+    outputs: [{ type: 'uint256' as const }],
+    stateMutability: 'view' as const,
+  },
+  {
+    type: 'function' as const,
+    name: 'balanceOf',
+    inputs: [{ type: 'address' as const }],
+    outputs: [{ type: 'uint256' as const }],
+    stateMutability: 'view' as const,
+  },
+] as const
+
+export const ERC20_ABI = [
+  {
+    type: 'function' as const,
+    name: 'approve',
+    inputs: [
+      { type: 'address' as const, name: 'spender' },
+      { type: 'uint256' as const, name: 'amount' },
+    ],
+    outputs: [{ type: 'bool' as const }],
+    stateMutability: 'nonpayable' as const,
+  },
+  {
+    type: 'function' as const,
+    name: 'allowance',
+    inputs: [
+      { type: 'address' as const, name: 'owner' },
+      { type: 'address' as const, name: 'spender' },
+    ],
+    outputs: [{ type: 'uint256' as const }],
+    stateMutability: 'view' as const,
+  },
+  {
+    type: 'function' as const,
+    name: 'balanceOf',
+    inputs: [{ type: 'address' as const }],
+    outputs: [{ type: 'uint256' as const }],
+    stateMutability: 'view' as const,
+  },
+  {
+    type: 'function' as const,
+    name: 'decimals',
+    inputs: [],
+    outputs: [{ type: 'uint8' as const }],
+    stateMutability: 'view' as const,
+  },
 ] as const
 
 export const REGISTRY_ABI = [

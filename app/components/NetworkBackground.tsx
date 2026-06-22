@@ -38,7 +38,7 @@ export function NetworkBackground() {
             y2={y2}
             stroke="#4DD8E8"
             strokeWidth={0.5}
-            opacity={0.3 + Math.random() * 0.4}
+            opacity={0.3 + ((i * 137 + 43) % 100) / 100 * 0.4}
           />
         ))}
 
