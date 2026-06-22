@@ -6,9 +6,5 @@
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../packages/types" },
-    { "path": "../packages/x402" }
-  ]
+  "include": ["src"]
 }

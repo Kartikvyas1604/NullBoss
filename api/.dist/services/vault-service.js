@@ -1,0 +1,53 @@
+import { createPublicClient, createWalletClient, http, parseAbi } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+export class VaultService {
+    publicClient;
+    walletClient;
+    vaultAddress;
+    constructor(chainId, rpcUrl, vaultAddress, privateKey) {
+        const chain = {
+            id: chainId,
+            name: 'Avalanche',
+            nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 },
+            rpcUrls: { default: { http: [rpcUrl] } }
+        };
+        this.publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
+        this.vaultAddress = vaultAddress;
+        if (privateKey) {
+            this.walletClient = createWalletClient({
+                account: privateKeyToAccount(privateKey),
+                chain,
+                transport: http(rpcUrl)
+            });
+        }
+    }
+    async getTotalAssets() {
+        return this.publicClient.readContract({
+            address: this.vaultAddress,
+            abi: parseAbi(['function totalAssets() view returns (uint256)']),
+            functionName: 'totalAssets'
+        });
+    }
+    async getSharePrice() {
+        const [totalAssets, totalSupply] = await Promise.all([
+            this.getTotalAssets(),
+            this.publicClient.readContract({
+                address: this.vaultAddress,
+                abi: parseAbi(['function totalSupply() view returns (uint256)']),
+                functionName: 'totalSupply'
+            })
+        ]);
+        return totalSupply > 0n ? (totalAssets * BigInt(10 ** 18)) / totalSupply : BigInt(10 ** 18);
+    }
+    async harvest(agentId) {
+        if (!this.walletClient)
+            throw new Error('Wallet not configured');
+        return this.walletClient.writeContract({
+            address: this.vaultAddress,
+            abi: parseAbi(['function harvest(uint256 agentId)']),
+            functionName: 'harvest',
+            args: [BigInt(agentId)]
+        });
+    }
+}
+//# sourceMappingURL=vault-service.js.map

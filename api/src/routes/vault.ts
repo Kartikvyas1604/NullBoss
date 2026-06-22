@@ -1,7 +1,21 @@
 import { Hono } from 'hono'
 import { createPublicClient, http } from 'viem'
+import { avalancheFuji, avalanche } from 'viem/chains'
 
 const vaultRouter = new Hono()
+
+const CHAIN_ID = parseInt(process.env.CHAIN_ID || '43113')
+const RPC_URL = process.env.RPC_URL || (CHAIN_ID === 43114
+  ? 'https://api.avax.network/ext/bc/C/rpc'
+  : 'https://api.avax-test.network/ext/bc/C/rpc')
+const CHAIN = CHAIN_ID === 43114 ? avalanche : avalancheFuji
+
+const client = createPublicClient({
+  chain: CHAIN,
+  transport: http(RPC_URL, { timeout: 8_000 }),
+})
+const readContract = client.readContract as any
+const getLogs = client.getLogs as any
 
 const VAULT_ABI = [
   { type: 'function' as const, name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' as const }], stateMutability: 'view' as const },
@@ -10,28 +24,16 @@ const VAULT_ABI = [
   { type: 'function' as const, name: 'paused', inputs: [], outputs: [{ type: 'bool' as const }], stateMutability: 'view' as const },
 ] as const
 
-function getClient() {
-  const chainId = parseInt(process.env.CHAIN_ID || '43113')
-  const rpc = chainId === 43114
-    ? 'https://api.avax.network/ext/bc/C/rpc'
-    : 'https://api.avax-test.network/ext/bc/C/rpc'
-  return createPublicClient({
-    chain: { id: chainId, name: 'Avalanche', nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 }, rpcUrls: { default: { http: [rpc] } } },
-    transport: http(rpc)
-  })
-}
-
 vaultRouter.get('/state', async (c) => {
-  const client = getClient()
   const vaultAddress = process.env.VAULT_ADDRESS as `0x${string}`
   if (!vaultAddress) return c.json({ error: 'Vault not configured' }, 500)
 
   try {
     const [totalAssets, totalSupply, highWaterMark, paused] = await Promise.all([
-      client.readContract({ address: vaultAddress, abi: VAULT_ABI, functionName: 'totalAssets' }),
-      client.readContract({ address: vaultAddress, abi: VAULT_ABI, functionName: 'totalSupply' }),
-      client.readContract({ address: vaultAddress, abi: VAULT_ABI, functionName: 'highWaterMark' }),
-      client.readContract({ address: vaultAddress, abi: VAULT_ABI, functionName: 'paused' }),
+      readContract({ address: vaultAddress, abi: VAULT_ABI, functionName: 'totalAssets' }),
+      readContract({ address: vaultAddress, abi: VAULT_ABI, functionName: 'totalSupply' }),
+      readContract({ address: vaultAddress, abi: VAULT_ABI, functionName: 'highWaterMark' }),
+      readContract({ address: vaultAddress, abi: VAULT_ABI, functionName: 'paused' }),
     ])
 
     const sharePrice = totalSupply > 0n ? (totalAssets * BigInt(10 ** 18)) / totalSupply : BigInt(10 ** 18)
@@ -50,12 +52,11 @@ vaultRouter.get('/state', async (c) => {
 })
 
 vaultRouter.get('/deposits', async (c) => {
-  const client = getClient()
   const vaultAddress = process.env.VAULT_ADDRESS as `0x${string}`
   if (!vaultAddress) return c.json({ error: 'Vault not configured' }, 500)
 
   try {
-    const deposits = await client.getLogs({
+    const deposits = await getLogs({
       address: vaultAddress,
       event: {
         type: 'event' as const,
@@ -71,7 +72,7 @@ vaultRouter.get('/deposits', async (c) => {
       toBlock: 'latest' as const,
     })
     return c.json({
-      deposits: deposits.map(d => ({
+      deposits: deposits.map((d: any) => ({
         sender: d.args.sender,
         owner: d.args.owner,
         assets: d.args.assets?.toString(),
@@ -86,12 +87,11 @@ vaultRouter.get('/deposits', async (c) => {
 })
 
 vaultRouter.get('/withdrawals', async (c) => {
-  const client = getClient()
   const vaultAddress = process.env.VAULT_ADDRESS as `0x${string}`
   if (!vaultAddress) return c.json({ error: 'Vault not configured' }, 500)
 
   try {
-    const withdrawals = await client.getLogs({
+    const withdrawals = await getLogs({
       address: vaultAddress,
       event: {
         type: 'event' as const,
@@ -108,7 +108,7 @@ vaultRouter.get('/withdrawals', async (c) => {
       toBlock: 'latest' as const,
     })
     return c.json({
-      withdrawals: withdrawals.map(w => ({
+      withdrawals: withdrawals.map((w: any) => ({
         sender: w.args.sender,
         receiver: w.args.receiver,
         owner: w.args.owner,

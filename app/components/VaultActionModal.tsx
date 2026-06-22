@@ -29,7 +29,6 @@ const COMMON_ERRORS: Record<string, string> = {
   'insufficient balance': 'Insufficient balance.',
   'max redeem': 'You do not have enough shares.',
   'ERC20InsufficientBalance': 'Insufficient share balance.',
-  'execution reverted: ERC4626: redeem more than maxRedeem': 'You are trying to withdraw more shares than you own.',
 }
 
 function shortenError(err: unknown): string {
@@ -56,7 +55,6 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
   const isProcessing = useRef(false)
 
   const vaultAddr = CONTRACT_ADDRESSES.vault
-  const agentWallet = CONTRACT_ADDRESSES.agentWallet
   const isWithdraw = mode === 'withdraw'
 
   const { data: assetAddr } = useReadContract({
@@ -74,20 +72,20 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
     query: { enabled: !!assetAddr && !!address },
   })
 
-  const { data: agentWalletBalance, refetch: refetchAgentBalance } = useReadContract({
-    address: assetAddr,
-    abi: erc20Abi,
-    functionName: 'balanceOf',
-    args: agentWallet ? [agentWallet] : undefined,
-    query: { enabled: !!assetAddr && !!agentWallet && isDeployed(agentWallet) },
-  })
-
   const { data: userShares, refetch: refetchShares } = useReadContract({
     address: vaultAddr,
     abi: VAULT_ABI,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: { enabled: !!address && isDeployed(vaultAddr) },
+  })
+
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: assetAddr,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: address && vaultAddr ? [address, vaultAddr] : undefined,
+    query: { enabled: !!assetAddr && !!address && !!vaultAddr },
   })
 
   const { data: maxRedeem } = useReadContract({
@@ -106,6 +104,14 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
     query: { enabled: isWithdraw && !!amount && Number(amount) > 0 && isDeployed(vaultAddr) },
   })
 
+  const { data: expectedShares, isFetching: depositPreviewLoading } = useReadContract({
+    address: vaultAddr,
+    abi: VAULT_ABI,
+    functionName: 'previewDeposit',
+    args: !isWithdraw && parseUnits(amount || '0', 6) > 0n ? [parseUnits(amount, 6)] : undefined,
+    query: { enabled: !isWithdraw && !!amount && Number(amount) > 0 && isDeployed(vaultAddr) },
+  })
+
   const { writeContractAsync } = useWriteContract()
 
   const assetDecimals = 6
@@ -121,7 +127,6 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
 
   const handleSubmit = async () => {
     if (!vaultAddr || !address || !assetAddr || !parsedAmount || isProcessing.current) return
-    if (isWithdraw && (!agentWallet || !isDeployed(agentWallet))) return
     isProcessing.current = true
 
     try {
@@ -136,27 +141,50 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
           args: [parsedAmount, address, address],
         })
         setTxHash(hash)
-
         await waitForTransactionReceipt(config, { hash, confirmations: 1 })
 
         await Promise.all([refetchBalance(), refetchShares()])
         onSuccess?.()
         setStep('done')
       } else {
+        const publicClient = createPublicClient({
+          chain: CHAIN_ID === 43114 ? avalanche : avalancheFuji,
+          transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc'),
+        })
+        const currentAllowance = await publicClient.readContract({
+          address: assetAddr,
+          abi: erc20Abi,
+          functionName: 'allowance',
+          args: [address, vaultAddr],
+        }) as bigint
+
+        if (currentAllowance < parsedAmount) {
+          setStep('approving')
+          setStepError(null)
+
+          const hash = await writeContractAsync({
+            address: assetAddr,
+            abi: erc20Abi,
+            functionName: 'approve',
+            args: [vaultAddr, parsedAmount],
+          })
+          await waitForTransactionReceipt(config, { hash, confirmations: 1 })
+          await refetchAllowance()
+        }
+
         setStep('depositing')
         setStepError(null)
 
         const hash = await writeContractAsync({
-          address: assetAddr,
-          abi: erc20Abi,
-          functionName: 'transfer',
-          args: [agentWallet!, parsedAmount],
+          address: vaultAddr,
+          abi: VAULT_ABI,
+          functionName: 'deposit',
+          args: [parsedAmount, address],
         })
         setTxHash(hash)
-
         await waitForTransactionReceipt(config, { hash, confirmations: 1 })
 
-        await Promise.all([refetchBalance(), refetchAgentBalance()])
+        await Promise.all([refetchBalance(), refetchShares()])
         onSuccess?.()
         setStep('done')
       }
@@ -172,6 +200,7 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
     setStep('idle')
     setStepError(null)
     setTxHash(null)
+    refetchAllowance()
   }
 
   const isProcessingTx = step === 'approving' || step === 'depositing' || step === 'withdrawing'
@@ -180,15 +209,13 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
   const exceedsBalance = !isWithdraw && userBalance !== undefined && parsedAmount > 0n && parsedAmount > (userBalance as bigint)
   const isButtonDisabled = !amount || Number(amount) <= 0 || isProcessingTx || !!exceedsMaxRedeem || !!exceedsBalance
 
-  const showPreview = isWithdraw && parsedAmount > 0n && expectedAssets !== undefined && !previewLoading
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-lg border border-border bg-raised p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-mono text-sm uppercase tracking-[0.15em] text-foreground">
-            {mode === 'deposit' ? '[ Fund Agent Wallet ]' : '[ Withdraw Shares ]'}
+            {mode === 'deposit' ? '[ Deposit USDC ]' : '[ Withdraw ]'}
           </h2>
           <button
             type="button"
@@ -201,20 +228,13 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
 
         <div className="mb-4 font-mono text-[10px] text-foreground-muted">
           {mode === 'deposit'
-            ? 'Send USDC to the AI agent wallet for on-chain trading. Redeem shares from the vault to withdraw.'
+            ? 'Deposit USDC to mint NULLBOSS shares at current NAV.'
             : 'Redeem NULLBOSS shares for pro-rata USDC.'}
         </div>
 
-        {mode === 'deposit' && agentWalletBalance !== undefined && (
-          <div className="mb-2 flex items-center justify-between rounded border border-accent-cyan/10 bg-accent-cyan/5 px-3 py-1.5 font-mono text-[10px]">
-            <span className="text-foreground-muted">Agent Trading Capital</span>
-            <span className="text-accent-cyan">{formatUnits(agentWalletBalance as bigint, 6)} USDC</span>
-          </div>
-        )}
-
         <div className="mb-4 flex items-center justify-between rounded border border-border bg-surface px-3 py-2 font-mono text-xs">
           <span className="text-foreground-muted">
-            {mode === 'deposit' ? 'Your USDC Balance' : 'Your Shares'}
+            {mode === 'deposit' ? 'USDC Balance' : 'Your Shares'}
           </span>
           <span className="text-foreground">
             {mode === 'deposit'
@@ -227,7 +247,7 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
           </span>
         </div>
 
-        {isWithdraw && showPreview && (
+        {isWithdraw && expectedAssets !== undefined && !previewLoading && parsedAmount > 0n && (
           <div className="mb-4 flex items-center justify-between rounded border border-accent-cyan/20 bg-accent-cyan/5 px-3 py-2 font-mono text-xs">
             <span className="text-foreground-muted">You will receive</span>
             <span className="text-accent-cyan">
@@ -236,10 +256,12 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
           </div>
         )}
 
-        {isWithdraw && previewLoading && parsedAmount > 0n && (
-          <div className="mb-4 flex items-center justify-between rounded border border-border bg-surface px-3 py-2 font-mono text-xs">
+        {!isWithdraw && expectedShares !== undefined && !depositPreviewLoading && parsedAmount > 0n && (
+          <div className="mb-4 flex items-center justify-between rounded border border-accent-cyan/20 bg-accent-cyan/5 px-3 py-2 font-mono text-xs">
             <span className="text-foreground-muted">You will receive</span>
-            <span className="text-foreground-muted">Loading...</span>
+            <span className="text-accent-cyan">
+              ~{formatUnits(expectedShares as bigint, shareDecimals)} shares
+            </span>
           </div>
         )}
 
@@ -290,7 +312,7 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
         {step === 'done' ? (
           <div className="space-y-3">
             <div className="rounded border border-accent-green bg-accent-green/5 px-3 py-3 text-center font-mono text-xs text-accent-green">
-              {mode === 'deposit' ? 'Sent to agent wallet' : 'Withdraw confirmed'}
+              {mode === 'deposit' ? 'Deposit confirmed' : 'Withdraw confirmed'}
             </div>
             {txHash && (
               <a
@@ -331,13 +353,19 @@ export function VaultActionModal({ mode, onClose, onSuccess }: VaultActionModalP
               {step === 'approving'
                 ? '[ Approving... ]'
                 : step === 'depositing'
-                  ? '[ Sending... ]'
+                  ? '[ Depositing... ]'
                   : step === 'withdrawing'
                     ? '[ Withdrawing... ]'
                     : mode === 'deposit'
-                      ? '[ Send to Agent Wallet ]'
+                      ? '[ Deposit ]'
                       : '[ Withdraw ]'}
             </button>
+          </div>
+        )}
+
+        {mode === 'deposit' && step === 'idle' && !!parsedAmount && (
+          <div className="mt-2 text-center font-mono text-[10px] text-foreground-muted">
+            MetaMask will prompt twice (approve + deposit).
           </div>
         )}
       </div>

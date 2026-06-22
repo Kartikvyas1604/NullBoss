@@ -1,7 +1,7 @@
-import { createWalletClient, http, parseUnits, type Hash } from 'viem'
+import { createPublicClient, createWalletClient, http, parseUnits, type Hash } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { avaxFuji, avalanche } from 'viem/chains'
-import type { X402Response, X402PaymentReceipt, X402PaymentRequest } from './types'
+import { avalanche, avalancheFuji } from 'viem/chains'
+import type { X402Response } from './types'
 
 export class X402Client {
   private walletClient
@@ -13,7 +13,7 @@ export class X402Client {
     this.chainId = chainId
     this.walletClient = createWalletClient({
       account: this.account,
-      chain: chainId === 43114 ? avalanche : avaxFuji,
+      chain: chainId === 43114 ? avalanche : avalancheFuji,
       transport: http()
     })
   }
@@ -25,7 +25,7 @@ export class X402Client {
     })
 
     if (initialResponse.status === 402) {
-      const paymentRequest: X402Response = await initialResponse.json()
+      const paymentRequest = await initialResponse.json() as X402Response
       return this.retryWithPayment(url, options, paymentRequest)
     }
 
@@ -54,14 +54,14 @@ export class X402Client {
     const tx = await this.walletClient.sendTransaction({
       to: request.recipient as `0x${string}`,
       value: parseUnits(request.amount, 18),
-      chainId: this.chainId
+      chain: null
     })
     return tx
   }
 
   async verifyPayment(receiptHash: Hash): Promise<boolean> {
-    const publicClient = createWalletClient({
-      chain: this.chainId === 43114 ? avalanche : avaxFuji,
+    const publicClient = createPublicClient({
+      chain: this.chainId === 43114 ? avalanche : avalancheFuji,
       transport: http()
     })
     const receipt = await publicClient.getTransactionReceipt({ hash: receiptHash })

@@ -1,5 +1,5 @@
 {
-  "extends": "@nullboss/config/tsconfig/library.json",
+  "extends": "../config/tsconfig/library.json",
   "compilerOptions": {
     "outDir": ".dist",
     "rootDir": "src"

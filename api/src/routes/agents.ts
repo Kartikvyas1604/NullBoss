@@ -1,18 +1,20 @@
 import { Hono } from 'hono'
 import { createPublicClient, http } from 'viem'
+import { avalancheFuji, avalanche } from 'viem/chains'
 
 const agentRouter = new Hono()
 
-function getClient() {
-  const chainId = parseInt(process.env.CHAIN_ID || '43113')
-  const rpc = chainId === 43114
-    ? 'https://api.avax.network/ext/bc/C/rpc'
-    : 'https://api.avax-test.network/ext/bc/C/rpc'
-  return createPublicClient({
-    chain: { id: chainId, name: 'Avalanche', nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 }, rpcUrls: { default: { http: [rpc] } } },
-    transport: http(rpc)
-  })
-}
+const CHAIN_ID = parseInt(process.env.CHAIN_ID || '43113')
+const RPC_URL = process.env.RPC_URL || (CHAIN_ID === 43114
+  ? 'https://api.avax.network/ext/bc/C/rpc'
+  : 'https://api.avax-test.network/ext/bc/C/rpc')
+const CHAIN = CHAIN_ID === 43114 ? avalanche : avalancheFuji
+
+const client = createPublicClient({
+  chain: CHAIN,
+  transport: http(RPC_URL, { timeout: 8_000 }),
+})
+const readContract = client.readContract as any
 
 const REGISTRY_ABI = [
   {
@@ -59,14 +61,13 @@ const AGENT_LABELS: Record<number, { name: string; type: string }> = {
 }
 
 async function fetchAgents() {
-  const client = getClient()
   const registryAddress = process.env.REGISTRY_ADDRESS as `0x${string}`
   if (!registryAddress) return []
 
   const agents: any[] = []
   for (let i = 1; i <= 10; i++) {
     try {
-      const agent = await client.readContract({
+      const agent = await readContract({
         address: registryAddress,
         abi: REGISTRY_ABI,
         functionName: 'getAgent',
@@ -75,7 +76,7 @@ async function fetchAgents() {
       const a = agent as any
       if (!a.registered) continue
 
-      const isActive = await client.readContract({
+      const isActive = await readContract({
         address: registryAddress,
         abi: REGISTRY_ABI,
         functionName: 'isAgentActive',
@@ -85,7 +86,7 @@ async function fetchAgents() {
       let totalTrades = 0
       let successfulTrades = 0
       try {
-        const rep = await client.readContract({
+        const rep = await readContract({
           address: registryAddress,
           abi: REGISTRY_ABI,
           functionName: 'getReputation',
@@ -133,12 +134,11 @@ agentRouter.get('/:id', async (c) => {
 })
 
 agentRouter.get('/:id/reputation', async (c) => {
-  const client = getClient()
   const registryAddress = process.env.REGISTRY_ADDRESS as `0x${string}`
   const agentId = parseInt(c.req.param('id'))
 
   try {
-    const rep = await client.readContract({
+    const rep = await readContract({
       address: registryAddress,
       abi: REGISTRY_ABI,
       functionName: 'getReputation',

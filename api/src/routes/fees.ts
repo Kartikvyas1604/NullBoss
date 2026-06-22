@@ -1,18 +1,21 @@
 import { Hono } from 'hono'
 import { createPublicClient, http } from 'viem'
+import { avalancheFuji, avalanche } from 'viem/chains'
 
 const feeRouter = new Hono()
 
-function getClient() {
-  const chainId = parseInt(process.env.CHAIN_ID || '43113')
-  const rpc = chainId === 43114
-    ? 'https://api.avax.network/ext/bc/C/rpc'
-    : 'https://api.avax-test.network/ext/bc/C/rpc'
-  return createPublicClient({
-    chain: { id: chainId, name: 'Avalanche', nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 }, rpcUrls: { default: { http: [rpc] } } },
-    transport: http(rpc)
-  })
-}
+const CHAIN_ID = parseInt(process.env.CHAIN_ID || '43113')
+const RPC_URL = process.env.RPC_URL || (CHAIN_ID === 43114
+  ? 'https://api.avax.network/ext/bc/C/rpc'
+  : 'https://api.avax-test.network/ext/bc/C/rpc')
+const CHAIN = CHAIN_ID === 43114 ? avalanche : avalancheFuji
+
+const client = createPublicClient({
+  chain: CHAIN,
+  transport: http(RPC_URL, { timeout: 8_000 }),
+})
+const readContract = client.readContract as any
+const getLogs = client.getLogs as any
 
 const FEE_ROUTER_ABI = [
   { type: 'function' as const, name: 'parentPercent', inputs: [], outputs: [{ type: 'uint256' as const }], stateMutability: 'view' as const },
@@ -23,17 +26,16 @@ const FEE_ROUTER_ABI = [
 ] as const
 
 feeRouter.get('/breakdown', async (c) => {
-  const client = getClient()
   const feeRouterAddress = process.env.FEE_ROUTER_ADDRESS as `0x${string}`
   if (!feeRouterAddress) return c.json({ error: 'FeeRouter not configured' }, 500)
 
   try {
     const [parentPct, subAgentPct, treasuryPct, treasuryAddr, ownerAddr] = await Promise.all([
-      client.readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'parentPercent' }),
-      client.readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'subAgentPercent' }),
-      client.readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'treasuryPercent' }),
-      client.readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'treasury' }),
-      client.readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'owner' }),
+      readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'parentPercent' }),
+      readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'subAgentPercent' }),
+      readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'treasuryPercent' }),
+      readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'treasury' }),
+      readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'owner' }),
     ])
 
     return c.json({
@@ -50,12 +52,11 @@ feeRouter.get('/breakdown', async (c) => {
 })
 
 feeRouter.get('/history', async (c) => {
-  const client = getClient()
   const feeRouterAddress = process.env.FEE_ROUTER_ADDRESS as `0x${string}`
   if (!feeRouterAddress) return c.json({ history: [], total: 0 })
 
   try {
-    const mgmtEvents = await client.getLogs({
+    const mgmtEvents = await getLogs({
       address: feeRouterAddress,
       event: {
         type: 'event' as const,
@@ -69,7 +70,7 @@ feeRouter.get('/history', async (c) => {
       fromBlock: 0n,
       toBlock: 'latest' as const,
     })
-    const perfEvents = await client.getLogs({
+    const perfEvents = await getLogs({
       address: feeRouterAddress,
       event: {
         type: 'event' as const,
@@ -85,12 +86,12 @@ feeRouter.get('/history', async (c) => {
     })
 
     return c.json({
-      managementEvents: mgmtEvents.map(e => ({
+      managementEvents: mgmtEvents.map((e: any) => ({
         agentId: Number(e.args.agentId),
         amount: e.args.amount?.toString(),
         caller: e.args.caller,
       })),
-      performanceEvents: perfEvents.map(e => ({
+      performanceEvents: perfEvents.map((e: any) => ({
         agentId: Number(e.args.agentId),
         amount: e.args.amount?.toString(),
         caller: e.args.caller,

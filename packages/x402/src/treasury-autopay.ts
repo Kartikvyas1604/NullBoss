@@ -1,11 +1,12 @@
-import { createWalletClient, http, parseUnits, type Hash, type Address } from 'viem'
+import { createPublicClient, createWalletClient, http, type Hash } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { avalanche, avaxFuji } from 'viem/chains'
+import { avalanche, avalancheFuji } from 'viem/chains'
 import type { TreasuryAutopayConfig } from './types'
 
 export class TreasuryAutopay {
   private config: TreasuryAutopayConfig
   private walletClient
+  private publicClient
   private account
   private dailySpent: bigint = 0n
   private lastResetDay: number = 0
@@ -19,7 +20,11 @@ export class TreasuryAutopay {
     this.account = privateKeyToAccount(treasuryKey)
     this.walletClient = createWalletClient({
       account: this.account,
-      chain: chainId === 43114 ? avalanche : avaxFuji,
+      chain: chainId === 43114 ? avalanche : avalancheFuji,
+      transport: http()
+    })
+    this.publicClient = createPublicClient({
+      chain: chainId === 43114 ? avalanche : avalancheFuji,
       transport: http()
     })
     this.resetDailyIfNeeded()
@@ -41,7 +46,7 @@ export class TreasuryAutopay {
       return null
     }
 
-    const balance = await this.walletClient.getBalance({
+    const balance = await this.publicClient.getBalance({
       address: this.config.hotWalletAddress
     })
 
@@ -53,7 +58,8 @@ export class TreasuryAutopay {
 
       const tx = await this.walletClient.sendTransaction({
         to: this.config.hotWalletAddress,
-        value: topUpActual
+        value: topUpActual,
+        chain: null
       })
 
       this.dailySpent += topUpActual

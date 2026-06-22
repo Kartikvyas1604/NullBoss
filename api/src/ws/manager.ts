@@ -1,18 +1,28 @@
-import type { WebSocketHandler } from 'bun'
 import { createPublicClient, http } from 'viem'
+import { avalancheFuji } from 'viem/chains'
+
+type WebSocketLike = {
+  send(data: string): void
+}
+
+type WebSocketHandler = {
+  open?: (ws: WebSocketLike) => void
+  message?: (ws: WebSocketLike, message: { toString(): string }) => void
+  close?: (ws: WebSocketLike) => void
+}
 
 interface WSClient {
   id: string
-  socket: WebSocket
+  socket: WebSocketLike
   subscriptions: Set<string>
 }
 
-function getClient() {
-  return createPublicClient({
-    chain: { id: 43113, name: 'Avalanche Fuji', nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 }, rpcUrls: { default: { http: ['https://api.avax-test.network/ext/bc/C/rpc'] } } },
-    transport: http('https://api.avax-test.network/ext/bc/C/rpc')
-  })
-}
+const RPC_URL = process.env.RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc'
+const client = createPublicClient({
+  chain: avalancheFuji,
+  transport: http(RPC_URL, { timeout: 8_000 }),
+})
+const readContract = client.readContract as any
 
 const VAULT_ABI = [
   { type: 'function' as const, name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' as const }], stateMutability: 'view' as const },
@@ -27,7 +37,7 @@ const REGISTRY_ABI = [
 
 class WSManager {
   private clients: Map<string, WSClient> = new Map()
-  private heartbeatInterval: Timer
+  private heartbeatInterval: ReturnType<typeof setInterval>
   private vaultAddress = process.env.VAULT_ADDRESS as `0x${string}`
   private registryAddress = process.env.REGISTRY_ADDRESS as `0x${string}`
 
@@ -39,13 +49,13 @@ class WSManager {
     return {
       open: (ws) => {
         const id = `client_${Date.now()}_${Math.random().toString(36).slice(2)}`
-        this.clients.set(id, { id, socket: ws as any, subscriptions: new Set(['heartbeat']) })
+        this.clients.set(id, { id, socket: ws, subscriptions: new Set(['heartbeat']) })
         this.send(ws, { type: 'connected', clientId: id })
       },
       message: (ws, message) => {
         try {
           const data = JSON.parse(message.toString())
-          this.handleMessage(ws as any, data)
+          this.handleMessage(ws, data)
         } catch { /* ignore malformed messages */ }
       },
       close: (ws) => {
@@ -59,7 +69,7 @@ class WSManager {
     }
   }
 
-  private handleMessage(socket: WebSocket, data: any) {
+  private handleMessage(socket: WebSocketLike, data: any) {
     switch (data.type) {
       case 'subscribe':
         for (const [, client] of this.clients) {
@@ -80,13 +90,11 @@ class WSManager {
     }
   }
 
-  private send(ws: WebSocket, data: any) {
+  private send(ws: WebSocketLike, data: any) {
     try { ws.send(JSON.stringify(data)) } catch { /* drop */ }
   }
 
   async broadcastHeartbeat() {
-    const client = getClient()
-
     let nav = { sharePrice: '0', totalAssets: '0', dailyPnl: '0' }
     let agentData = {
       arbitrage: { status: 'unknown' as const, confidence: 0 },
@@ -98,8 +106,8 @@ class WSManager {
     try {
       if (this.vaultAddress) {
         const [totalAssets, totalSupply] = await Promise.all([
-          client.readContract({ address: this.vaultAddress, abi: VAULT_ABI, functionName: 'totalAssets' }),
-          client.readContract({ address: this.vaultAddress, abi: VAULT_ABI, functionName: 'totalSupply' }),
+          readContract({ address: this.vaultAddress, abi: VAULT_ABI, functionName: 'totalAssets' }),
+          readContract({ address: this.vaultAddress, abi: VAULT_ABI, functionName: 'totalSupply' }),
         ])
         const ta = Number(totalAssets as bigint) / 1e6
         const ts = Number(totalSupply as bigint) / 1e18
@@ -115,8 +123,8 @@ class WSManager {
       if (this.registryAddress) {
         const results = await Promise.allSettled(
           [2, 3, 4, 1].map(id =>
-            client.readContract({ address: this.registryAddress, abi: REGISTRY_ABI, functionName: 'getReputation', args: [BigInt(id)] })
-              .then(r => ({ id, total: Number((r as any)[0]), success: Number((r as any)[1]) }))
+            readContract({ address: this.registryAddress, abi: REGISTRY_ABI, functionName: 'getReputation', args: [BigInt(id)] })
+              .then((r: any) => ({ id, total: Number(r[0]), success: Number(r[1]) }))
           )
         )
         const agents: Record<string, { status: string; confidence: number }> = { arbitrage: { status: 'unknown', confidence: 0 }, trend: { status: 'unknown', confidence: 0 }, liquidation: { status: 'unknown', confidence: 0 }, orchestrator: { status: 'unknown', confidence: 0 } }

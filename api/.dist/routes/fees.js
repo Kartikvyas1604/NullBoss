@@ -1,0 +1,101 @@
+import { Hono } from 'hono';
+import { createPublicClient, http } from 'viem';
+import { avalancheFuji, avalanche } from 'viem/chains';
+const feeRouter = new Hono();
+const CHAIN_ID = parseInt(process.env.CHAIN_ID || '43113');
+const RPC_URL = process.env.RPC_URL || (CHAIN_ID === 43114
+    ? 'https://api.avax.network/ext/bc/C/rpc'
+    : 'https://api.avax-test.network/ext/bc/C/rpc');
+const CHAIN = CHAIN_ID === 43114 ? avalanche : avalancheFuji;
+const client = createPublicClient({
+    chain: CHAIN,
+    transport: http(RPC_URL, { timeout: 8_000 }),
+});
+const readContract = client.readContract;
+const getLogs = client.getLogs;
+const FEE_ROUTER_ABI = [
+    { type: 'function', name: 'parentPercent', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' },
+    { type: 'function', name: 'subAgentPercent', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' },
+    { type: 'function', name: 'treasuryPercent', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' },
+    { type: 'function', name: 'treasury', inputs: [], outputs: [{ type: 'address' }], stateMutability: 'view' },
+    { type: 'function', name: 'owner', inputs: [], outputs: [{ type: 'address' }], stateMutability: 'view' },
+];
+feeRouter.get('/breakdown', async (c) => {
+    const feeRouterAddress = process.env.FEE_ROUTER_ADDRESS;
+    if (!feeRouterAddress)
+        return c.json({ error: 'FeeRouter not configured' }, 500);
+    try {
+        const [parentPct, subAgentPct, treasuryPct, treasuryAddr, ownerAddr] = await Promise.all([
+            readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'parentPercent' }),
+            readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'subAgentPercent' }),
+            readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'treasuryPercent' }),
+            readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'treasury' }),
+            readContract({ address: feeRouterAddress, abi: FEE_ROUTER_ABI, functionName: 'owner' }),
+        ]);
+        return c.json({
+            parentPercent: parentPct.toString(),
+            subAgentPercent: subAgentPct.toString(),
+            treasuryPercent: treasuryPct.toString(),
+            treasury: treasuryAddr,
+            owner: ownerAddr,
+            bpsDenominator: 10000,
+        });
+    }
+    catch (err) {
+        return c.json({ error: err instanceof Error ? err.message : 'RPC error' }, 500);
+    }
+});
+feeRouter.get('/history', async (c) => {
+    const feeRouterAddress = process.env.FEE_ROUTER_ADDRESS;
+    if (!feeRouterAddress)
+        return c.json({ history: [], total: 0 });
+    try {
+        const mgmtEvents = await getLogs({
+            address: feeRouterAddress,
+            event: {
+                type: 'event',
+                name: 'ManagementFeeDistributed',
+                inputs: [
+                    { type: 'uint256', name: 'agentId', indexed: true },
+                    { type: 'uint256', name: 'amount' },
+                    { type: 'address', name: 'caller', indexed: true },
+                ],
+            },
+            fromBlock: 0n,
+            toBlock: 'latest',
+        });
+        const perfEvents = await getLogs({
+            address: feeRouterAddress,
+            event: {
+                type: 'event',
+                name: 'PerformanceFeeDistributed',
+                inputs: [
+                    { type: 'uint256', name: 'agentId', indexed: true },
+                    { type: 'uint256', name: 'amount' },
+                    { type: 'address', name: 'caller', indexed: true },
+                ],
+            },
+            fromBlock: 0n,
+            toBlock: 'latest',
+        });
+        return c.json({
+            managementEvents: mgmtEvents.map((e) => ({
+                agentId: Number(e.args.agentId),
+                amount: e.args.amount?.toString(),
+                caller: e.args.caller,
+            })),
+            performanceEvents: perfEvents.map((e) => ({
+                agentId: Number(e.args.agentId),
+                amount: e.args.amount?.toString(),
+                caller: e.args.caller,
+            })),
+            totalMgmt: mgmtEvents.length,
+            totalPerf: perfEvents.length,
+        });
+    }
+    catch (err) {
+        return c.json({ history: [], total: 0 });
+    }
+});
+export { feeRouter };
+//# sourceMappingURL=fees.js.map

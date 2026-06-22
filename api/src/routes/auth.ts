@@ -15,7 +15,7 @@ authRouter.post('/login', async (c) => {
 
   try {
     const siweMessage = new SiweMessage(message)
-    const fields = await siweMessage.verify({ signature })
+    const { data: fields } = await siweMessage.verify({ signature })
 
     const token = Buffer.from(`nullboss:${fields.address}:${Date.now()}`).toString('base64')
 

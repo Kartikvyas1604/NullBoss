@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { createPublicClient, http } from 'viem'
 
 const privacyRouter = new Hono()
 

@@ -1,4 +1,4 @@
-import type { X402PaymentRequest } from './types'
+import type { X402Response } from './types'
 
 export function createX402Middleware(config: {
   price: bigint
@@ -17,7 +17,7 @@ export function createX402Middleware(config: {
         token: config.token,
         recipient: config.recipient,
         chainId: 43114
-      } satisfies X402PaymentRequest), {
+      } satisfies X402Response), {
         status: 402,
         headers: { 'Content-Type': 'application/json' }
       })

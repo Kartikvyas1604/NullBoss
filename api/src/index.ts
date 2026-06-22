@@ -5,7 +5,6 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { secureHeaders } from 'hono/secure-headers'
 import { v1Router } from './routes/v1'
-import { wsManager } from './ws/manager'
 
 const app = new Hono()
 
@@ -29,7 +28,6 @@ const port = parseInt(process.env.PORT || '3001')
 const server = serve({
   fetch: app.fetch,
   port,
-  websocket: wsManager.getWebSocketHandler()
 })
 
 console.log(`NULLBOSS API running on port ${port}`)
