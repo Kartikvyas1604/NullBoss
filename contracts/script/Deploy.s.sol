@@ -96,14 +96,22 @@ contract Deploy is Script {
         }
 
         // 10. Transfer DEFAULT_ADMIN_ROLE of FundVault to treasury for safety
-        fundVault.revokeRole(fundVault.DEFAULT_ADMIN_ROLE(), deployer);
-        fundVault.grantRole(fundVault.DEFAULT_ADMIN_ROLE(), treasuryAddress);
-        console.log("Admin role transferred to treasury:", treasuryAddress);
+        if (treasuryAddress != deployer) {
+            fundVault.revokeRole(fundVault.DEFAULT_ADMIN_ROLE(), deployer);
+            fundVault.grantRole(fundVault.DEFAULT_ADMIN_ROLE(), treasuryAddress);
+            console.log("Admin role transferred to treasury:", treasuryAddress);
+        } else {
+            console.log("Skipping admin transfer (treasury == deployer)");
+        }
 
         // 11. Transfer DEFAULT_ADMIN_ROLE of StrategyExecutor to treasury
-        strategyExecutor.revokeRole(strategyExecutor.DEFAULT_ADMIN_ROLE(), deployer);
-        strategyExecutor.grantRole(strategyExecutor.DEFAULT_ADMIN_ROLE(), treasuryAddress);
-        console.log("StrategyExecutor admin transferred to treasury");
+        if (treasuryAddress != deployer) {
+            strategyExecutor.revokeRole(strategyExecutor.DEFAULT_ADMIN_ROLE(), deployer);
+            strategyExecutor.grantRole(strategyExecutor.DEFAULT_ADMIN_ROLE(), treasuryAddress);
+            console.log("StrategyExecutor admin transferred to treasury");
+        } else {
+            console.log("Skipping StrategyExecutor admin transfer (treasury == deployer)");
+        }
 
         vm.stopBroadcast();
 

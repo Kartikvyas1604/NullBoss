@@ -1,5 +1,6 @@
-export { TrendAgent } from './trend-agent'
-export type { AgentConfig } from '@nullboss/core'
+import { TrendAgent } from './trend-agent'
+import type { AgentConfig } from '@nullboss/core'
+export { TrendAgent }
 
 async function main() {
   const config: AgentConfig = {

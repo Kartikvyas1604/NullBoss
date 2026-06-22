@@ -69,7 +69,33 @@ export class TrendAgent extends BaseAgent {
       return
     }
     const direction = this.currentConfidence > 50 ? 'LONG' : 'SHORT'
-    console.log(`[Trend] Executing ${direction} on Trader Joe perps (confidence: ${this.currentConfidence}%)`)
+    console.log(`[Trend] Executing ${direction} (confidence: ${this.currentConfidence}%)`)
+
+    const balance = await this.walletClient.getBalance({ address: this.config.agentAddress })
+    console.log(`[Trend] Agent balance: ${balance}`)
+
+    if (balance < BigInt(1000000)) {
+      console.log('[Trend] Insufficient balance, skipping')
+      return
+    }
+
+    const usdc = this.config.usdcToken
+    const adapter = this.config.mockTradeAdapter
+    const amountIn = balance / BigInt(2)
+    const data = '0x' as `0x${string}`
+    const maxSlippageBps = 100n
+    const expectedMinAmountOut = amountIn
+
+    await this.executorClient.approveToken(usdc, amountIn)
+    const txHash = await this.executorClient.executeTradeWithTokenIn(
+      adapter,
+      usdc,
+      amountIn,
+      data,
+      maxSlippageBps,
+      expectedMinAmountOut,
+    )
+    console.log(`[Trend] Trade executed: ${txHash}`)
     this.tradesToday++
     this.currentConfidence = 0
   }

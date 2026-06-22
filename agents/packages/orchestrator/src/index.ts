@@ -1,5 +1,7 @@
-export { OrchestratorAgent } from './orchestrator-agent'
-export type { HealthStatus } from '@nullboss/core'
+import { OrchestratorAgent } from './orchestrator-agent'
+import type { AgentConfig, HealthStatus } from '@nullboss/core'
+export { OrchestratorAgent }
+export type { HealthStatus }
 
 async function main() {
   const config: AgentConfig = {

@@ -8,7 +8,6 @@ import {
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { AgentConfig } from './types'
-import type { X402PaymentReceipt } from '@nullboss/x402'
 
 const STRATEGY_EXECUTOR_ABI = [
   {
@@ -17,19 +16,29 @@ const STRATEGY_EXECUTOR_ABI = [
     inputs: [
       { name: 'agentId', type: 'uint256' },
       { name: 'adapter', type: 'address' },
-      { name: 'calldata', type: 'bytes' },
-      { name: 'maxSlippage', type: 'uint256' },
+      { name: 'data', type: 'bytes' },
+      { name: 'maxSlippageBps', type: 'uint256' },
+      { name: 'expectedMinAmountOut', type: 'uint256' },
       { name: 'x402Receipt', type: 'bytes32' }
     ],
-    outputs: [],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
     stateMutability: 'nonpayable'
   },
   {
-    name: 'maxTradePercent',
+    name: 'executeTradeWithTokenIn',
     type: 'function',
-    inputs: [],
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view'
+    inputs: [
+      { name: 'agentId', type: 'uint256' },
+      { name: 'adapter', type: 'address' },
+      { name: 'tokenIn', type: 'address' },
+      { name: 'amountIn', type: 'uint256' },
+      { name: 'data', type: 'bytes' },
+      { name: 'maxSlippageBps', type: 'uint256' },
+      { name: 'expectedMinAmountOut', type: 'uint256' },
+      { name: 'x402Receipt', type: 'bytes32' }
+    ],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+    stateMutability: 'nonpayable'
   }
 ] as const
 
@@ -42,13 +51,13 @@ export class StrategyExecutorClient {
   constructor(config: AgentConfig) {
     this.config = config
     this.account = privateKeyToAccount(config.privateKey)
-    
+
     this.walletClient = createWalletClient({
       account: this.account,
       chain: this.getChain(),
       transport: http(config.rpcUrl)
     })
-    
+
     this.publicClient = createPublicClient({
       chain: this.getChain(),
       transport: http(config.rpcUrl)
@@ -61,37 +70,39 @@ export class StrategyExecutorClient {
 
   async executeTrade(
     adapter: Address,
-    calldata: `0x${string}`,
-    maxSlippage: bigint,
+    data: `0x${string}`,
+    maxSlippageBps: bigint,
+    expectedMinAmountOut: bigint,
     x402Receipt: `0x${string}` = '0x0000000000000000000000000000000000000000000000000000000000000000'
   ): Promise<Hash> {
-    const actionHash = this.hashAction(adapter, calldata)
-    const isValid = await this.publicClient.readContract({
-      address: this.config.executorAddress,
-      abi: [
-        { name: 'agents', type: 'function', inputs: [{ name: '', type: 'address' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'view' }
-      ] as any,
-      functionName: 'agents',
-      args: [this.account.address]
-    })
-
-    if (!isValid) {
-      throw new Error(`Agent ${this.config.agentId} not authorized on StrategyExecutor`)
-    }
-
     const tx = await this.walletClient.writeContract({
       address: this.config.executorAddress,
       abi: STRATEGY_EXECUTOR_ABI,
       functionName: 'executeTrade',
-      args: [BigInt(this.config.agentId), adapter, calldata, maxSlippage, x402Receipt],
+      args: [BigInt(this.config.agentId), adapter, data, maxSlippageBps, expectedMinAmountOut, x402Receipt],
       chain: null as any
     })
-    
+
     return tx
   }
 
-  private hashAction(adapter: Address, calldata: `0x${string}`): `0x${string}` {
-    const hash = [...new Uint8Array(32)]
-    return `0x${Buffer.from(hash).toString('hex')}` as `0x${string}`
+  async executeTradeWithTokenIn(
+    adapter: Address,
+    tokenIn: Address,
+    amountIn: bigint,
+    data: `0x${string}`,
+    maxSlippageBps: bigint,
+    expectedMinAmountOut: bigint,
+    x402Receipt: `0x${string}` = '0x0000000000000000000000000000000000000000000000000000000000000000'
+  ): Promise<Hash> {
+    const tx = await this.walletClient.writeContract({
+      address: this.config.executorAddress,
+      abi: STRATEGY_EXECUTOR_ABI,
+      functionName: 'executeTradeWithTokenIn',
+      args: [BigInt(this.config.agentId), adapter, tokenIn, amountIn, data, maxSlippageBps, expectedMinAmountOut, x402Receipt],
+      chain: null as any
+    })
+
+    return tx
   }
 }

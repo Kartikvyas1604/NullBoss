@@ -66,6 +66,30 @@ export class LiquidationAgent extends BaseAgent {
     const target = this.positions.find(p => p.healthFactor < this.MIN_HEALTH_FACTOR)
     if (!target) return
     console.log(`[Liquidation] Liquidating ${target.protocol} position ${target.positionId} for ${this.LIQUIDATION_BONUS_BPS} bps bonus`)
+
+    const balance = await this.walletClient.getBalance({ address: this.config.agentAddress })
+    if (balance < BigInt(1000000)) {
+      console.log('[Liquidation] Insufficient balance, skipping')
+      return
+    }
+
+    const usdc = this.config.usdcToken
+    const adapter = this.config.mockTradeAdapter
+    const amountIn = balance / BigInt(2)
+    const data = '0x' as `0x${string}`
+    const maxSlippageBps = 100n
+    const expectedMinAmountOut = amountIn
+
+    await this.executorClient.approveToken(usdc, amountIn)
+    const txHash = await this.executorClient.executeTradeWithTokenIn(
+      adapter,
+      usdc,
+      amountIn,
+      data,
+      maxSlippageBps,
+      expectedMinAmountOut,
+    )
+    console.log(`[Liquidation] Trade executed: ${txHash}`)
     this.tradesToday++
     this.currentConfidence = 0
   }

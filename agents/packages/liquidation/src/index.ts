@@ -1,5 +1,6 @@
-export { LiquidationAgent } from './liquidation-agent'
-export type { AgentConfig } from '@nullboss/core'
+import { LiquidationAgent } from './liquidation-agent'
+import type { AgentConfig } from '@nullboss/core'
+export { LiquidationAgent }
 
 async function main() {
   const config: AgentConfig = {

@@ -8,13 +8,14 @@ import {
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { AgentConfig, HealthStatus } from './types'
-import type { X402PaymentReceipt } from '@nullboss/x402'
+import { StrategyExecutorClient } from './strategy-executor-client'
 
 export abstract class BaseAgent {
   protected config: AgentConfig
   protected account: PrivateKeyAccount
   protected walletClient
   protected publicClient
+  protected executorClient: StrategyExecutorClient
   protected startTime: number
   protected lastAction: number = 0
   protected tradesToday: number = 0
@@ -26,6 +27,7 @@ export abstract class BaseAgent {
     this.config = config
     this.account = privateKeyToAccount(config.privateKey)
     this.startTime = Date.now()
+    this.executorClient = new StrategyExecutorClient(config)
     
     this.walletClient = createWalletClient({
       account: this.account,

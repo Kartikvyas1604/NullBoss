@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { parseUnits, formatUnits, erc20Abi } from 'viem'
+import { useEffect, useState, useRef } from 'react'
+import { useAccount, useReadContract, useWriteContract } from 'wagmi'
+import { waitForTransactionReceipt } from '@wagmi/core'
+import { config } from '@/app/lib/wagmi'
+import { parseUnits, formatUnits, erc20Abi, createPublicClient, http } from 'viem'
+import { avalancheFuji } from 'viem/chains'
 import { CONTRACT_ADDRESSES, isDeployed, VAULT_ABI } from '@/app/lib/contracts'
 
 interface VaultActionModalProps {
@@ -10,13 +13,15 @@ interface VaultActionModalProps {
   onClose: () => void
 }
 
-type Step = 'idle' | 'approving' | 'approve-confirm' | 'executing' | 'done' | 'error'
+type Step = 'idle' | 'approving' | 'depositing' | 'done' | 'error'
 
 export function VaultActionModal({ mode, onClose }: VaultActionModalProps) {
   const { address } = useAccount()
   const [amount, setAmount] = useState('')
   const [step, setStep] = useState<Step>('idle')
   const [stepError, setStepError] = useState<string | null>(null)
+  const [approveHash, setApproveHash] = useState<`0x${string}` | null>(null)
+  const isProcessing = useRef(false)
 
   const vaultAddr = CONTRACT_ADDRESSES.vault
 
@@ -27,7 +32,7 @@ export function VaultActionModal({ mode, onClose }: VaultActionModalProps) {
     query: { enabled: isDeployed(vaultAddr) },
   })
 
-  const { data: userBalance } = useReadContract({
+  const { data: userBalance, refetch: refetchBalance } = useReadContract({
     address: assetAddr,
     abi: erc20Abi,
     functionName: 'balanceOf',
@@ -51,82 +56,80 @@ export function VaultActionModal({ mode, onClose }: VaultActionModalProps) {
     query: { enabled: !!assetAddr && !!address && !!vaultAddr },
   })
 
-  const assetDecimals = 6
+  const { writeContractAsync } = useWriteContract()
 
+  const assetDecimals = 6
   const parsedAmount = amount ? parseUnits(amount, assetDecimals) : BigInt(0)
 
-  const needsApprove = mode === 'deposit' && !!allowance && !!parsedAmount && parsedAmount > allowance
+  const handleDeposit = async () => {
+    if (!vaultAddr || !address || !assetAddr || !parsedAmount || isProcessing.current) return
+    isProcessing.current = true
 
-  const {
-    writeContract: write,
-    data: txHash,
-    isPending: txPending,
-    error: txError,
-  } = useWriteContract()
+    try {
+      if (mode === 'deposit') {
+        const publicClient = createPublicClient({
+          chain: avalancheFuji,
+          transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc'),
+        })
+        const currentAllowance = await publicClient.readContract({
+          address: assetAddr,
+          abi: erc20Abi,
+          functionName: 'allowance',
+          args: [address, vaultAddr],
+        }) as bigint
 
-  const { isSuccess: txConfirmed, isError: txFailed } = useWaitForTransactionReceipt({
-    hash: txHash,
-  })
+        if (currentAllowance < parsedAmount) {
+          setStep('approving')
+          setStepError(null)
 
-  useEffect(() => {
-    if (txConfirmed) setStep('done')
-  }, [txConfirmed])
+          const hash = await writeContractAsync({
+            address: assetAddr,
+            abi: erc20Abi,
+            functionName: 'approve',
+            args: [vaultAddr, parsedAmount],
+          })
+          await waitForTransactionReceipt(config, { hash, confirmations: 1 })
+          await refetchAllowance()
+        }
+      }
 
-  useEffect(() => {
-    if (txError) {
+      setStep('depositing')
+      setStepError(null)
+
+      if (mode === 'deposit') {
+        await writeContractAsync({
+          address: vaultAddr,
+          abi: VAULT_ABI,
+          functionName: 'deposit',
+          args: [parsedAmount, address],
+        })
+      } else {
+        await writeContractAsync({
+          address: vaultAddr,
+          abi: VAULT_ABI,
+          functionName: 'redeem',
+          args: [parsedAmount, address, address],
+        })
+      }
+
+      await refetchBalance()
+      setStep('done')
+    } catch (err: any) {
       setStep('error')
-      setStepError(txError.message)
-    }
-  }, [txError])
-
-  useEffect(() => {
-    if (txFailed) {
-      setStep('error')
-      setStepError('Transaction reverted')
-    }
-  }, [txFailed])
-
-  const handleApprove = () => {
-    if (!assetAddr || !vaultAddr || !parsedAmount) return
-    setStep('approving')
-    setStepError(null)
-    write({
-      address: assetAddr,
-      abi: erc20Abi,
-      functionName: 'approve',
-      args: [vaultAddr, parsedAmount],
-    })
-  }
-
-  const handleExecute = () => {
-    if (!vaultAddr || !address || !parsedAmount) return
-    setStep('executing')
-    setStepError(null)
-
-    if (mode === 'deposit') {
-      write({
-        address: vaultAddr,
-        abi: VAULT_ABI,
-        functionName: 'deposit',
-        args: [parsedAmount, address],
-      })
-    } else {
-      write({
-        address: vaultAddr,
-        abi: VAULT_ABI,
-        functionName: 'redeem',
-        args: [parsedAmount, address, address],
-      })
+      setStepError(err?.message || err?.shortMessage || 'Transaction failed')
+    } finally {
+      isProcessing.current = false
     }
   }
 
   const handleRetry = () => {
     setStep('idle')
     setStepError(null)
+    setApproveHash(null)
     refetchAllowance()
   }
 
-  const isButtonDisabled = !amount || Number(amount) <= 0 || step === 'approving' || step === 'executing' || txPending
+  const isButtonDisabled = !amount || Number(amount) <= 0 || step === 'approving' || step === 'depositing'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -151,7 +154,6 @@ export function VaultActionModal({ mode, onClose }: VaultActionModalProps) {
             : 'Redeem NULLBOSS shares for pro-rata USDC.'}
         </div>
 
-        {/* Balance info */}
         <div className="mb-4 flex items-center justify-between rounded border border-border bg-surface px-3 py-2 font-mono text-xs">
           <span className="text-foreground-muted">
             {mode === 'deposit' ? 'USDC Balance' : 'Your Shares'}
@@ -167,7 +169,6 @@ export function VaultActionModal({ mode, onClose }: VaultActionModalProps) {
           </span>
         </div>
 
-        {/* Amount input */}
         <div className="mb-5">
           <label className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.1em] text-foreground-muted">
             Amount
@@ -180,7 +181,7 @@ export function VaultActionModal({ mode, onClose }: VaultActionModalProps) {
               placeholder="0.00"
               min="0"
               step="any"
-              className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-foreground-muted/40 focus:border-accent-cyan transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-foreground-muted/40 focus:border-accent-cyan transition-colors [appearance:textfield] [&::-webkit-inner-spin-number]:appearance-none [&::-webkit-outer-spin-number]:appearance-none"
               disabled={step === 'done'}
             />
             <button
@@ -202,7 +203,6 @@ export function VaultActionModal({ mode, onClose }: VaultActionModalProps) {
           </div>
         </div>
 
-        {/* Action buttons */}
         {step === 'done' ? (
           <div className="rounded border border-accent-green bg-accent-green/5 px-3 py-3 text-center font-mono text-xs text-accent-green">
             {mode === 'deposit' ? 'Deposit submitted' : 'Withdraw submitted'}
@@ -222,19 +222,9 @@ export function VaultActionModal({ mode, onClose }: VaultActionModalProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {needsApprove && mode === 'deposit' && (
-              <button
-                type="button"
-                onClick={handleApprove}
-                disabled={isButtonDisabled}
-                className="w-full rounded border border-accent-amber px-3 py-2 font-mono text-xs text-accent-amber hover:bg-accent-amber/5 transition-colors disabled:opacity-30"
-              >
-                {txPending && step === 'approving' ? 'Approving...' : '[ Approve USDC ]'}
-              </button>
-            )}
             <button
               type="button"
-              onClick={handleExecute}
+              onClick={handleDeposit}
               disabled={isButtonDisabled}
               className={`w-full rounded px-3 py-2 font-mono text-xs font-medium transition-opacity disabled:opacity-30 ${
                 mode === 'deposit'
@@ -242,16 +232,14 @@ export function VaultActionModal({ mode, onClose }: VaultActionModalProps) {
                   : 'border border-accent-red text-accent-red hover:bg-accent-red/5'
               }`}
             >
-              {txPending && step === 'executing'
-                ? mode === 'deposit' ? 'Depositing...' : 'Withdrawing...'
-                : mode === 'deposit' ? '[ Deposit ]' : '[ Withdraw ]'}
+              {step === 'approving' ? '[ Approving... ]' : step === 'depositing' ? '[ Depositing... ]' : mode === 'deposit' ? '[ Deposit ]' : '[ Withdraw ]'}
             </button>
           </div>
         )}
 
-        {txHash && step !== 'error' && step !== 'done' && (
-          <div className="mt-3 text-center font-mono text-[10px] text-foreground-muted">
-            Tx: {txHash.slice(0, 10)}...{txHash.slice(-6)}
+        {mode === 'deposit' && step === 'idle' && !!parsedAmount && (
+          <div className="mt-2 text-center font-mono text-[10px] text-foreground-muted">
+            MetaMask will prompt twice (approve + deposit).
           </div>
         )}
       </div>

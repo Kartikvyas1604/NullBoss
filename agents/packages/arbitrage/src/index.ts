@@ -1,5 +1,6 @@
-export { ArbitrageAgent } from './arbitrage-agent'
-export type { AgentConfig } from '@nullboss/core'
+import { ArbitrageAgent } from './arbitrage-agent'
+import type { AgentConfig } from '@nullboss/core'
+export { ArbitrageAgent }
 
 async function main() {
   const config: AgentConfig = {
