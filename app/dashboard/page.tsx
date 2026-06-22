@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const { address, isConnected } = useAccount()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
-  const { state, isLoading, notDeployed } = useFundState()
+  const { state, isLoading, notDeployed, refresh: refreshVault } = useFundState()
   const { data: balance } = useBalance({ address })
   const [action, setAction] = useState<'deposit' | 'withdraw' | null>(null)
   const [switchError, setSwitchError] = useState<string | null>(null)
@@ -218,6 +218,7 @@ export default function DashboardPage() {
         <VaultActionModal
           mode={action}
           onClose={() => setAction(null)}
+          onSuccess={refreshVault}
         />
       )}
     </main>

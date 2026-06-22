@@ -22,6 +22,7 @@ export const CONTRACT_ADDRESSES = {
   executor: process.env.NEXT_PUBLIC_EXECUTOR_ADDRESS as `0x${string}` | undefined,
   feeRouter: process.env.NEXT_PUBLIC_FEE_ROUTER_ADDRESS as `0x${string}` | undefined,
   positionLedger: process.env.NEXT_PUBLIC_POSITION_LEDGER_ADDRESS as `0x${string}` | undefined,
+  agentWallet: process.env.NEXT_PUBLIC_AGENT_WALLET_ADDRESS as `0x${string}` | undefined,
 }
 
 export function isDeployed(address: `0x${string}` | undefined): address is `0x${string}` {
@@ -281,7 +282,7 @@ export async function checkVault(): Promise<BootCheckResult> {
     return { label, ok: true, latency }
   } catch (err) {
     const latency = Math.round(performance.now() - start)
-    return { label: 'Syncing NAV oracle feed', ok: false, error: err instanceof Error ? err.message : 'Vault read failed', latency }
+    return { label: 'Vault read failed', ok: false, error: err instanceof Error ? err.message : 'Vault read failed', latency }
   }
 }
 
@@ -314,7 +315,7 @@ export async function checkRegistry(): Promise<BootCheckResult> {
     return { label, ok: true, latency }
   } catch (err) {
     const latency = Math.round(performance.now() - start)
-    return { label: 'Spawning sub-agents', ok: false, error: err instanceof Error ? err.message : 'Registry read failed', latency }
+    return { label: 'Registry read failed', ok: false, error: err instanceof Error ? err.message : 'Registry read failed', latency }
   }
 }
 

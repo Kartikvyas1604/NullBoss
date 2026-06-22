@@ -1,4 +1,5 @@
 import type { WebSocketHandler } from 'bun'
+import { createPublicClient, http } from 'viem'
 
 interface WSClient {
   id: string
@@ -6,9 +7,29 @@ interface WSClient {
   subscriptions: Set<string>
 }
 
+function getClient() {
+  return createPublicClient({
+    chain: { id: 43113, name: 'Avalanche Fuji', nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 }, rpcUrls: { default: { http: ['https://api.avax-test.network/ext/bc/C/rpc'] } } },
+    transport: http('https://api.avax-test.network/ext/bc/C/rpc')
+  })
+}
+
+const VAULT_ABI = [
+  { type: 'function' as const, name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' as const }], stateMutability: 'view' as const },
+  { type: 'function' as const, name: 'totalSupply', inputs: [], outputs: [{ type: 'uint256' as const }], stateMutability: 'view' as const },
+  { type: 'function' as const, name: 'paused', inputs: [], outputs: [{ type: 'bool' as const }], stateMutability: 'view' as const },
+] as const
+
+const REGISTRY_ABI = [
+  { type: 'function' as const, name: 'getReputation', inputs: [{ type: 'uint256' as const }], outputs: [{ type: 'uint256' as const }, { type: 'uint256' as const }], stateMutability: 'view' as const },
+  { type: 'function' as const, name: 'isAgentActive', inputs: [{ type: 'uint256' as const }], outputs: [{ type: 'bool' as const }], stateMutability: 'view' as const },
+] as const
+
 class WSManager {
   private clients: Map<string, WSClient> = new Map()
   private heartbeatInterval: Timer
+  private vaultAddress = process.env.VAULT_ADDRESS as `0x${string}`
+  private registryAddress = process.env.REGISTRY_ADDRESS as `0x${string}`
 
   constructor() {
     this.heartbeatInterval = setInterval(() => this.broadcastHeartbeat(), 10000)
@@ -63,21 +84,63 @@ class WSManager {
     try { ws.send(JSON.stringify(data)) } catch { /* drop */ }
   }
 
-  broadcastHeartbeat() {
+  async broadcastHeartbeat() {
+    const client = getClient()
+
+    let nav = { sharePrice: '0', totalAssets: '0', dailyPnl: '0' }
+    let agentData = {
+      arbitrage: { status: 'unknown' as const, confidence: 0 },
+      trend: { status: 'unknown' as const, confidence: 0 },
+      liquidation: { status: 'unknown' as const, confidence: 0 },
+      orchestrator: { status: 'unknown' as const, confidence: 0 },
+    }
+
+    try {
+      if (this.vaultAddress) {
+        const [totalAssets, totalSupply] = await Promise.all([
+          client.readContract({ address: this.vaultAddress, abi: VAULT_ABI, functionName: 'totalAssets' }),
+          client.readContract({ address: this.vaultAddress, abi: VAULT_ABI, functionName: 'totalSupply' }),
+        ])
+        const ta = Number(totalAssets as bigint) / 1e6
+        const ts = Number(totalSupply as bigint) / 1e18
+        nav = {
+          sharePrice: (ts > 0 ? (ta / ts) : 1).toFixed(6),
+          totalAssets: ta.toFixed(2),
+          dailyPnl: '0',
+        }
+      }
+    } catch {}
+
+    try {
+      if (this.registryAddress) {
+        const results = await Promise.allSettled(
+          [2, 3, 4, 1].map(id =>
+            client.readContract({ address: this.registryAddress, abi: REGISTRY_ABI, functionName: 'getReputation', args: [BigInt(id)] })
+              .then(r => ({ id, total: Number((r as any)[0]), success: Number((r as any)[1]) }))
+          )
+        )
+        const agents: Record<string, { status: string; confidence: number }> = { arbitrage: { status: 'unknown', confidence: 0 }, trend: { status: 'unknown', confidence: 0 }, liquidation: { status: 'unknown', confidence: 0 }, orchestrator: { status: 'unknown', confidence: 0 } }
+        const labels = ['orchestrator', 'arbitrage', 'trend', 'liquidation']
+        for (const r of results) {
+          if (r.status === 'fulfilled') {
+            const idx = labels[r.value.id - 1]
+            if (idx) {
+              agents[idx] = {
+                status: r.value.total > 0 ? 'running' : 'idle',
+                confidence: r.value.total > 0 ? Math.round((r.value.success / r.value.total) * 100) : 0,
+              }
+            }
+          }
+        }
+        agentData = agents as any
+      }
+    } catch {}
+
     const heartbeat = {
       type: 'heartbeat',
       timestamp: Date.now(),
-      agents: {
-        arbitrage: { status: 'running', confidence: Math.floor(Math.random() * 40) + 60 },
-        trend: { status: 'running', confidence: Math.floor(Math.random() * 30) + 70 },
-        liquidation: { status: Math.random() > 0.7 ? 'running' : 'idle', confidence: Math.floor(Math.random() * 50) + 30 },
-        orchestrator: { status: 'running', confidence: 92 }
-      },
-      nav: {
-        sharePrice: (125 + Math.random() * 2).toFixed(2),
-        totalAssets: (4500000 + Math.random() * 10000).toFixed(2),
-        dailyPnl: (Math.random() > 0.5 ? '' : '-') + (Math.random() * 5000).toFixed(2)
-      }
+      agents: agentData,
+      nav,
     }
 
     for (const client of this.clients.values()) {

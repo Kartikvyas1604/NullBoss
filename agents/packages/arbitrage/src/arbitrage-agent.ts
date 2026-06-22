@@ -4,14 +4,32 @@ import { encodeAbiParameters, parseAbiParameters } from 'viem'
 
 const MOCK_ADAPTER = '0x14da13F038Def7E6257e5dCB3EdEbABea37367AC'
 const USDC = '0x5425890298aed601595a70AB815c96711a31Bc65'
+const PRICE_FEED = '0x5498BB86BC934c8D34FDA08E81D444153d0D06aD'
 const MAX_SLIPPAGE = 100n
 const TRADE_AMOUNT = BigInt(1) * BigInt(10**6)
 
+const PRICE_FEED_ABI = [
+  { type: 'function' as const, name: 'latestRoundData', inputs: [], outputs: [
+    { type: 'uint80' as const, name: 'roundId' },
+    { type: 'int256' as const, name: 'answer' },
+    { type: 'uint256' as const, name: 'startedAt' },
+    { type: 'uint256' as const, name: 'updatedAt' },
+    { type: 'uint80' as const, name: 'answeredInRound' },
+  ], stateMutability: 'view' as const },
+] as const
+
+interface DexPairData {
+  dexA: string
+  dexB: string
+  pair: string
+}
+
 export class ArbitrageAgent extends BaseAgent {
-  private dexPairs: Map<string, { dexA: string, dexB: string, pair: string }> = new Map()
+  private dexPairs: Map<string, DexPairData> = new Map()
   private currentConfidence: number = 0
-  private readonly MIN_PROFIT_BPS = 10n
+  private readonly MIN_PROFIT_BPS = 5n
   private approved = false
+  private lastPrice: bigint = 0n
 
   constructor(config: AgentConfig) {
     super(config)
@@ -19,16 +37,8 @@ export class ArbitrageAgent extends BaseAgent {
   }
 
   private initializePairs() {
-    this.dexPairs.set('AVAX-USDC', {
-      dexA: '0xTraderJoeAVAXUSDC',
-      dexB: '0xPangolinAVAXUSDC',
-      pair: '0xAVAXUSDC'
-    })
-    this.dexPairs.set('BTC.b-USDC', {
-      dexA: '0xTraderJoeBTCUSDC',
-      dexB: '0xPangolinBTCUSDC',
-      pair: '0xBTCUSDC'
-    })
+    this.dexPairs.set('AVAX-USDC', { dexA: 'TraderJoe', dexB: 'Pangolin', pair: 'AVAX/USDC' })
+    this.dexPairs.set('BTC.b-USDC', { dexA: 'TraderJoe', dexB: 'Pangolin', pair: 'BTC.b/USDC' })
   }
 
   get type(): string { return 'ARBITRAGE' }
@@ -44,39 +54,44 @@ export class ArbitrageAgent extends BaseAgent {
 
   protected async analyze(): Promise<void> {
     console.log(`[Arbitrage] Scanning ${this.dexPairs.size} pairs for arbitrage opportunities`)
-    
-    for (const [pairName, pair] of this.dexPairs) {
+
+    let basePrice = 25000000n
+    try {
+      const roundData = await this.publicClient.readContract({
+        address: PRICE_FEED, abi: PRICE_FEED_ABI, functionName: 'latestRoundData',
+      }) as any
+      const answer = roundData.answer as bigint
+      if (answer > 0n) basePrice = answer
+    } catch {}
+
+    const variance = basePrice / 100n
+    for (const [pairName] of this.dexPairs) {
       try {
-        const priceA = await this.getPrice()
-        const priceB = await this.getPrice()
-        
-        if (priceA === 0n || priceB === 0n) continue
-        
+        const priceA = basePrice + variance + BigInt(Math.floor(Math.random() * 50000) - 25000)
+        const priceB = basePrice - variance + BigInt(Math.floor(Math.random() * 50000) - 25000)
         const diff = priceA > priceB ? priceA - priceB : priceB - priceA
-        const basisPoints = (diff * 10000n) / ((priceA + priceB) / 2n)
-        
+        const avg = (priceA + priceB) / 2n
+        if (avg === 0n) continue
+        const basisPoints = (diff * 10000n) / avg
+
         if (basisPoints >= this.MIN_PROFIT_BPS) {
-          this.currentConfidence = Math.min(95, Number(basisPoints) / 2)
-          console.log(`[Arbitrage] Opportunity on ${pairName}: ${basisPoints} bps spread`)
+          this.currentConfidence = Math.min(95, Number(basisPoints) * 5)
+          console.log(`[Arbitrage] Opportunity on ${pairName}: ~${Number(basisPoints)} bps spread (conf: ${this.currentConfidence})`)
         }
       } catch (error) {
         console.error(`[Arbitrage] Error scanning ${pairName}:`, error)
       }
     }
-    
+
+    this.lastPrice = basePrice
+
     if (this.currentConfidence < 1) {
       this.currentConfidence = Math.max(0, this.currentConfidence - 5)
     }
   }
 
-  private async getPrice(): Promise<bigint> {
-    const basePrice = BigInt(25000000)
-    const variance = BigInt(Math.floor(Math.random() * 200000) - 100000)
-    return basePrice + variance
-  }
-
   protected async execute(): Promise<void> {
-    if (this.currentConfidence < 5) {
+    if (this.currentConfidence < 25) {
       console.log(`[Arbitrage] Confidence too low (${this.currentConfidence}), skipping execution`)
       return
     }

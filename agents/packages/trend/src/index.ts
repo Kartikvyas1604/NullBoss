@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { TrendAgent } from './trend-agent'
 import type { AgentConfig } from '@nullboss/core'
 export { TrendAgent }

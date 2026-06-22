@@ -33,7 +33,8 @@ export function useFundState() {
       const totalSupplyNum = Number(ts) / 1e18
       const sharePrice = totalSupplyNum > 0 ? totalAssetsNum / totalSupplyNum : 0
       const hwmNum = Number(hwm) / 1e6
-      const sinceInception = hwmNum > 100 ? ((sharePrice - 100) / 100) * 100 : 0
+      const INITIAL_SHARE_PRICE = 1.00
+      const sinceInception = ((sharePrice - INITIAL_SHARE_PRICE) / INITIAL_SHARE_PRICE) * 100
 
       setState({
         nav: sharePrice,

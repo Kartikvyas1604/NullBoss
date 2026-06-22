@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { OrchestratorAgent } from './orchestrator-agent'
 import type { AgentConfig, HealthStatus } from '@nullboss/core'
 export { OrchestratorAgent }

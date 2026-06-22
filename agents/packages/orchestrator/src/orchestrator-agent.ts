@@ -21,7 +21,7 @@ export class OrchestratorAgent extends BaseAgent {
   private subAgents: Map<number, AgentRegistration> = new Map()
   private readonly REBALANCE_INTERVAL = 120000
   private lastRebalance: number = 0
-  private readonly TOTAL_CAPITAL = BigInt(100000) * BigInt(10**6)
+  private totalCapital = BigInt(100000) * BigInt(10**6)
 
   constructor(config: AgentConfig) {
     super(config)
@@ -73,7 +73,22 @@ export class OrchestratorAgent extends BaseAgent {
     console.log(`[Orchestrator] Capital rebalanced across ${active.length} agents`)
   }
 
+  private async refreshTotalCapital(): Promise<void> {
+    try {
+      const vaultAddress = this.config.vaultAddress as `0x${string}`
+      if (vaultAddress) {
+        const totalAssets = await this.publicClient.readContract({
+          address: vaultAddress,
+          abi: [{ type: 'function' as const, name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' as const }], stateMutability: 'view' as const }],
+          functionName: 'totalAssets',
+        }) as bigint
+        if (totalAssets > 0n) this.totalCapital = totalAssets
+      }
+    } catch {}
+  }
+
   protected async analyze(): Promise<void> {
+    await this.refreshTotalCapital()
     for (const [id, agent] of this.subAgents) {
       if (Date.now() - agent.lastHeartbeat > 300000) {
         agent.status = 'unhealthy'
@@ -98,9 +113,23 @@ export class OrchestratorAgent extends BaseAgent {
     }
   }
 
-  getFleetHealth(): HealthStatus[] {
+  async getFleetHealth(): Promise<HealthStatus[]> {
     const fleet: HealthStatus[] = []
     for (const agent of this.subAgents.values()) {
+      let tradesToday = 0
+      try {
+        const rep = await this.publicClient.readContract({
+          address: this.config.registryAddress,
+          abi: [{ type: 'function' as const, name: 'getReputation', inputs: [{ type: 'uint256' as const }], outputs: [
+            { type: 'uint256' as const, name: 'totalTrades' },
+            { type: 'uint256' as const, name: 'successfulTrades' },
+          ], stateMutability: 'view' as const }],
+          functionName: 'getReputation',
+          args: [BigInt(agent.agentId)],
+        }) as any
+        tradesToday = Number(rep[0] as bigint)
+      } catch {}
+
       fleet.push({
         agentId: agent.agentId,
         agentType: agent.type,
@@ -108,7 +137,7 @@ export class OrchestratorAgent extends BaseAgent {
         uptime: Date.now() - this.startTime,
         lastAction: agent.lastHeartbeat,
         lastHeartbeat: agent.lastHeartbeat,
-        tradesToday: 0,
+        tradesToday,
         pnlToday: 0n,
         confidence: agent.confidence
       })
@@ -122,7 +151,7 @@ export class OrchestratorAgent extends BaseAgent {
       .map(a => ({
         agentId: a.agentId,
         weight: a.weight,
-        allocatedCapital: (this.TOTAL_CAPITAL * BigInt(Math.floor(a.weight * 100))) / 10000n
+        allocatedCapital: (this.totalCapital * BigInt(Math.floor(a.weight * 100))) / 10000n
       }))
   }
 }

@@ -1,12 +1,24 @@
 import { BaseAgent, AgentX402Integration } from '@nullboss/core'
 import type { AgentConfig } from '@nullboss/core'
 
+const PRICE_FEED = '0x5498BB86BC934c8D34FDA08E81D444153d0D06aD'
+const PRICE_FEED_ABI = [
+  { type: 'function' as const, name: 'latestRoundData', inputs: [], outputs: [
+    { type: 'uint80' as const, name: 'roundId' },
+    { type: 'int256' as const, name: 'answer' },
+    { type: 'uint256' as const, name: 'startedAt' },
+    { type: 'uint256' as const, name: 'updatedAt' },
+    { type: 'uint80' as const, name: 'answeredInRound' },
+  ], stateMutability: 'view' as const },
+] as const
+
 export class TrendAgent extends BaseAgent {
   private currentConfidence: number = 0
   private x402: AgentX402Integration
-  private readonly MIN_CONFIDENCE_THRESHOLD = 65
-  private readonly TREND_LOOKBACK_BLOCKS = 100
+  private readonly MIN_CONFIDENCE_THRESHOLD = 55
+  private readonly TREND_LOOKBACK_BLOCKS = 60
   private priceHistory: bigint[] = []
+  private volumeBase: number = 65
 
   constructor(config: AgentConfig) {
     super(config)
@@ -32,40 +44,51 @@ export class TrendAgent extends BaseAgent {
     try {
       const sentiment = await this.x402.fetchData('https://api.nullboss.io/v1/sentiment/avalanche')
       sentimentSignal = sentiment.score || 0
-    } catch {
-      console.log('[Trend] x402 sentiment unavailable, using on-chain data only')
-    }
+    } catch {}
 
     const compositeScore = momentum * 0.4 + volumeSignal * 0.3 + sentimentSignal * 0.3
-    this.currentConfidence = Math.min(99, Math.max(0, compositeScore))
+    this.currentConfidence = Math.min(99, Math.max(0, Math.round(compositeScore)))
+    console.log(`[Trend] M:${momentum.toFixed(1)} V:${volumeSignal.toFixed(1)} S:${sentimentSignal.toFixed(1)} => confidence: ${this.currentConfidence}%`)
   }
 
   private async calculateMomentum(): Promise<number> {
-    const currentPrice = await this.getAVAXPrice()
-    this.priceHistory.push(currentPrice)
-    if (this.priceHistory.length > this.TREND_LOOKBACK_BLOCKS) {
-      this.priceHistory.shift()
+    try {
+      const roundData = await this.publicClient.readContract({
+        address: PRICE_FEED, abi: PRICE_FEED_ABI, functionName: 'latestRoundData',
+      }) as any
+      const priceWei = (roundData.answer as bigint) * 1000000n / 100000000n
+
+      this.priceHistory.push(priceWei)
+      if (this.priceHistory.length > this.TREND_LOOKBACK_BLOCKS) this.priceHistory.shift()
+      if (this.priceHistory.length < 5) return 50
+
+      const oldest = this.priceHistory[0]
+      if (oldest === 0n) return 50
+      const change = Number((priceWei - oldest) * 10000n / oldest)
+      return Math.max(-100, Math.min(100, change))
+    } catch {
+      return 50
     }
-    if (this.priceHistory.length < 10) return 0
-    const oldPrice = this.priceHistory[0]
-    if (oldPrice === 0n) return 0
-    const change = Number((currentPrice - oldPrice) * 10000n / oldPrice)
-    return Math.max(-100, Math.min(100, change))
   }
 
   private async analyzeVolume(): Promise<number> {
-    return 50 + Math.floor(Math.random() * 30)
-  }
-
-  private async getAVAXPrice(): Promise<bigint> {
-    const basePrice = BigInt(25000000)
-    const variance = BigInt(Math.floor(Math.random() * 1000000) - 500000)
-    return basePrice + variance
+    try {
+      const mockCount = await this.publicClient.readContract({
+        address: '0x14da13F038Def7E6257e5dCB3EdEbABea37367AC' as `0x${string}`,
+        abi: [{ type: 'function' as const, name: 'tradeCount', inputs: [], outputs: [{ type: 'uint256' as const }], stateMutability: 'view' as const }],
+        functionName: 'tradeCount',
+      }) as bigint
+      this.volumeBase = Math.min(95, Math.max(5, Number(mockCount) * 5 + 30))
+    } catch {
+      this.volumeBase += (Math.random() - 0.5) * 10
+      this.volumeBase = Math.max(30, Math.min(90, this.volumeBase))
+    }
+    return this.volumeBase
   }
 
   protected async execute(): Promise<void> {
     if (this.currentConfidence < this.MIN_CONFIDENCE_THRESHOLD) {
-      console.log('[Trend] Confidence too low, holding')
+      console.log(`[Trend] Confidence too low (${this.currentConfidence}%), holding`)
       return
     }
     const direction = this.currentConfidence > 50 ? 'LONG' : 'SHORT'

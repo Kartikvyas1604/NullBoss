@@ -5,10 +5,10 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
-    "dev:orchestrator": "tsx packages/orchestrator/src/index.ts",
-    "dev:arbitrage": "tsx packages/arbitrage/src/index.ts",
-    "dev:trend": "tsx packages/trend/src/index.ts",
-    "dev:liquidation": "tsx packages/liquidation/src/index.ts",
+    "dev:orchestrator": "AGENT_ID=1 AGENT_TYPE=ORCHESTRATOR tsx packages/orchestrator/src/index.ts",
+    "dev:arbitrage": "AGENT_ID=2 AGENT_TYPE=ARBITRAGE tsx packages/arbitrage/src/index.ts",
+    "dev:trend": "AGENT_ID=3 AGENT_TYPE=TREND tsx packages/trend/src/index.ts",
+    "dev:liquidation": "AGENT_ID=4 AGENT_TYPE=LIQUIDATION tsx packages/liquidation/src/index.ts",
     "typecheck": "turbo typecheck",
     "clean": "turbo clean"
   },
@@ -17,8 +17,8 @@
     "@nullboss/x402": "workspace:*"
   },
   "devDependencies": {
-    "tsx": "^4",
-    "typescript": "^5",
-    "@types/node": "^20"
+    "@types/node": "^20",
+    "tsx": "^4.22.4",
+    "typescript": "^5"
   }
 }

@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { ArbitrageAgent } from './arbitrage-agent'
 import type { AgentConfig } from '@nullboss/core'
 export { ArbitrageAgent }

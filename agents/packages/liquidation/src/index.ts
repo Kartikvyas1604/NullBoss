@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { LiquidationAgent } from './liquidation-agent'
 import type { AgentConfig } from '@nullboss/core'
 export { LiquidationAgent }
