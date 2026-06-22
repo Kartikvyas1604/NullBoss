@@ -103,7 +103,7 @@ export class ArbitrageAgent extends BaseAgent {
       }
 
       const data = encodeAbiParameters(parseAbiParameters('uint256'), [TRADE_AMOUNT])
-      const expectedOut = TRADE_AMOUNT
+      const expectedOut = 1n
 
       const tx = await this.executorClient.executeTradeWithTokenIn(
         MOCK_ADAPTER,
